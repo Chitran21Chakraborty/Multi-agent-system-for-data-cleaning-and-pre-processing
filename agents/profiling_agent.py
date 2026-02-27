@@ -4,17 +4,26 @@ from core.state import AgentState
 from core.llm import get_llm
 from langchain_core.messages import HumanMessage
 
+# SSE streaming
+_current_job_id = None
+
+def set_job_id(job_id: str):
+    global _current_job_id
+    _current_job_id = job_id
+
+def emit(event_type: str, data: dict):
+    if _current_job_id:
+        from api.stream import push_event_sync
+        push_event_sync(_current_job_id, event_type, data)
+
 
 def run_profiling(df: pd.DataFrame) -> dict:
-    """Generate a comprehensive statistical profile of the dataset."""
     report = {}
 
-    # --- Basic Info ---
     report["shape"] = {"rows": df.shape[0], "columns": df.shape[1]}
     report["column_names"] = df.columns.tolist()
     report["dtypes"] = df.dtypes.astype(str).to_dict()
 
-    # --- Missing Values ---
     missing = df.isnull().sum()
     missing_pct = (df.isnull().sum() / len(df) * 100).round(2)
     report["missing_values"] = {
@@ -22,10 +31,8 @@ def run_profiling(df: pd.DataFrame) -> dict:
         for col in df.columns if missing[col] > 0
     }
 
-    # --- Duplicates ---
     report["duplicate_rows"] = int(df.duplicated().sum())
 
-    # --- Numerical Analysis ---
     num_cols = df.select_dtypes(include='number').columns.tolist()
     report["numerical_columns"] = {}
     for col in num_cols:
@@ -40,7 +47,6 @@ def run_profiling(df: pd.DataFrame) -> dict:
             "outliers_iqr": int(count_outliers_iqr(df[col]))
         }
 
-    # --- Categorical Analysis ---
     cat_cols = df.select_dtypes(include='object').columns.tolist()
     report["categorical_columns"] = {}
     for col in cat_cols:
@@ -50,14 +56,12 @@ def run_profiling(df: pd.DataFrame) -> dict:
             "cardinality": classify_cardinality(df[col].nunique())
         }
 
-    # --- Class Balance (for classification) ---
     report["potential_target_columns"] = identify_potential_targets(df)
 
     return report
 
 
 def count_outliers_iqr(series: pd.Series) -> int:
-    """Count outliers using IQR method."""
     Q1 = series.quantile(0.25)
     Q3 = series.quantile(0.75)
     IQR = Q3 - Q1
@@ -65,7 +69,6 @@ def count_outliers_iqr(series: pd.Series) -> int:
 
 
 def classify_cardinality(n_unique: int) -> str:
-    """Classify cardinality of a categorical column."""
     if n_unique <= 2:
         return "binary"
     elif n_unique <= 10:
@@ -77,7 +80,6 @@ def classify_cardinality(n_unique: int) -> str:
 
 
 def identify_potential_targets(df: pd.DataFrame) -> list:
-    """Identify columns that could be target variables."""
     potential = []
     for col in df.columns:
         n_unique = df[col].nunique()
@@ -89,9 +91,7 @@ def identify_potential_targets(df: pd.DataFrame) -> list:
 
 
 def get_llm_insights(profile: dict, objective: str) -> str:
-    """Use LLM to generate human-readable insights from the profile."""
     llm = get_llm()
-
     prompt = f"""
 You are an expert data scientist. Based on the following dataset profile, provide 
 concise and actionable insights relevant to the learning objective.
@@ -115,32 +115,34 @@ Provide:
 3. Recommendations for the preprocessing pipeline
 Keep it concise — max 200 words.
 """
-
     response = llm.invoke([HumanMessage(content=prompt)])
     return response.content
 
 
 def summarize_numerical(num_cols: dict) -> str:
-    """Create a brief summary of numerical columns for the LLM."""
     lines = []
     for col, stats in num_cols.items():
         lines.append(
             f"  {col}: skewness={stats['skewness']}, "
-            f"outliers={stats['outliers_iqr']}, "
-            f"missing={stats.get('missing', 0)}"
+            f"outliers={stats['outliers_iqr']}"
         )
     return "\n".join(lines)
 
 
 def profiling_node(state: AgentState) -> AgentState:
-    print("Profiling agent running...")
-    
-    df = state.get("processed_dataframe")
-    if df is None:
-        state["errors"] = state.get("errors", []) + ["Profiling: No dataframe available"]
-        return state
+    print("Running profiling agent...")
 
-    # Run statistical profiling
+    # Emit start event
+    emit("agent_start", {"agent": "profiling", "label": "Data Profiling"})
+
+    df = state.get("dataframe")
+    if df is None:
+        from agents.orchestrator import load_dataset
+        df = load_dataset(state["dataset_path"])
+        state["dataframe"] = df
+        state["processed_dataframe"] = df.copy()
+
+    # Run profiling
     profile = run_profiling(df)
 
     # Get LLM insights
@@ -155,5 +157,19 @@ def profiling_node(state: AgentState) -> AgentState:
           f"{len(profile['categorical_columns'])} categorical columns analyzed")
     print(f"  Missing values found in: {list(profile['missing_values'].keys())}")
     print(f"  Duplicate rows: {profile['duplicate_rows']}")
+
+    # Emit done event with full summary
+    emit("agent_done", {
+        "agent": "profiling",
+        "summary": {
+            "rows": profile["shape"]["rows"],
+            "columns": profile["shape"]["columns"],
+            "missing_columns": len(profile["missing_values"]),
+            "duplicate_rows": profile["duplicate_rows"],
+            "numerical": len(profile["numerical_columns"]),
+            "categorical": len(profile["categorical_columns"]),
+            "insights": insights[:400]
+        }
+    })
 
     return state
