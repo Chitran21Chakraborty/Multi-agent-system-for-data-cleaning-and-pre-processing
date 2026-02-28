@@ -22,12 +22,10 @@ def detect_outliers(df: pd.DataFrame) -> dict:
 
     for col in num_cols:
         series = df[col].dropna()
-
         Q1 = series.quantile(0.25)
         Q3 = series.quantile(0.75)
         IQR = Q3 - Q1
         iqr_outliers = ((series < Q1 - 1.5 * IQR) | (series > Q3 + 1.5 * IQR)).sum()
-
         z_scores = np.abs((series - series.mean()) / series.std())
         zscore_outliers = (z_scores > 3).sum()
 
@@ -183,13 +181,17 @@ def outlier_node(state: AgentState) -> AgentState:
         }
         state["current_agent"] = "outlier"
 
-        # EMIT DONE — skipped
         emit("agent_done", {
             "agent": "outlier",
             "skipped": True,
             "reason": "No outliers detected in any column"
         })
         return state
+
+    # Capture BEFORE distributions (before any changes)
+    from agents.utils import capture_distributions
+    outlier_cols_list = list(cols_with_outliers.keys())[:4]
+    dist_before_outlier = capture_distributions(df, outlier_cols_list)
 
     # Get LLM strategy
     print("  Asking LLM for outlier handling strategy...")
@@ -215,16 +217,23 @@ def outlier_node(state: AgentState) -> AgentState:
     print(f"  Outlier handling complete — rows before: {rows_before}, after: {rows_after}")
     print(f"  Actions: {actions_taken}")
 
+    # Capture AFTER distributions (on cleaned dataframe)
+    dist_after = capture_distributions(df_cleaned, outlier_cols_list)
+
     # EMIT DONE
     emit("agent_done", {
         "agent": "outlier",
         "summary": {
-            "columns_with_outliers": len(cols_with_outliers),
+            "columns_with_outliers": len(actions_taken),
             "rows_before": rows_before,
-            "rows_after": rows_after,
-            "rows_removed": rows_before - rows_after
+            "rows_after":  df_cleaned.shape[0],
+            "rows_removed": rows_before - df_cleaned.shape[0]
         },
-        "actions": actions_taken
+        "actions": actions_taken,
+        "distributions": {
+            "before": dist_before_outlier,
+            "after":  dist_after
+        }
     })
 
     return state

@@ -188,8 +188,12 @@ def transformation_node(state: AgentState) -> AgentState:
             }
 
     print(f"  Numerical columns to transform: {num_cols}")
-    print("  Asking LLM for transformation strategy...")
 
+    # Capture before distributions
+    from agents.utils import capture_distributions
+    dist_before = capture_distributions(df, num_cols[:4])
+
+    print("  Asking LLM for transformation strategy...")
     strategies = get_transformation_strategy(num_cols_info, state["learning_objective"])
     print(f"  Strategies decided: {strategies}")
 
@@ -210,6 +214,9 @@ def transformation_node(state: AgentState) -> AgentState:
     print(f"  Actions: {actions_taken}")
 
     # EMIT DONE
+    from agents.utils import capture_distributions
+    dist_after = capture_distributions(df_transformed, list(dist_before.keys()))
+
     emit("agent_done", {
         "agent": "transformation",
         "summary": {
@@ -219,7 +226,11 @@ def transformation_node(state: AgentState) -> AgentState:
             "log_transformed": len([s for s in strategies.values() if s == "log_transform"]),
             "kept_as_is": len([s for s in strategies.values() if s == "keep"])
         },
-        "actions": actions_taken
+        "actions": actions_taken,
+        "distributions": {
+            "before": dist_before,
+            "after":  dist_after
+        }
     })
 
     return state

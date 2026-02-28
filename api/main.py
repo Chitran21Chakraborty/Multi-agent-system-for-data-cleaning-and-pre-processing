@@ -10,6 +10,8 @@ from pydantic import BaseModel
 from core.graph import build_graph
 from api.ui import router as ui_router
 from api.stream import router as stream_router, push_event_sync
+from reports.quality_score import compute_quality_score
+from reports.notebook_generator import generate_notebook
 
 app = FastAPI(
     title="Multi-Agent Data Preprocessing System",
@@ -87,7 +89,6 @@ async def preprocess_file(
     with open(file_path, "wb") as f:
         shutil.copyfileobj(file.file, f)
 
-    # Start pipeline in background — return job_id immediately
     def run_in_background():
         try:
             result = run_pipeline(file_path, learning_objective, job_id)
@@ -100,7 +101,6 @@ async def preprocess_file(
     thread = threading.Thread(target=run_in_background)
     thread.start()
 
-    # Return job_id immediately so browser connects to SSE
     return {"job_id": job_id, "status": "started"}
 
 
@@ -161,10 +161,16 @@ def download_script(job_id: str):
         raise HTTPException(status_code=404, detail="Script not found")
     return FileResponse(path, media_type="text/plain",
                         filename="preprocessing_script.py")
+@app.get("/download/{job_id}/notebook")
+def download_notebook(job_id: str):
+    path = f"outputs/{job_id}/preprocessing_notebook.ipynb"
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="Notebook not found")
+    return FileResponse(path, media_type="application/json",
+                        filename="preprocessing_notebook.ipynb")
 
 
 def run_pipeline(dataset_path: str, learning_objective: str, job_id: str) -> dict:
-    # Set job_id in all agent modules so they can emit events
     import agents.orchestrator as orch
     import agents.profiling_agent as pa
     import agents.imputation_agent as ia
@@ -199,6 +205,13 @@ def run_pipeline(dataset_path: str, learning_objective: str, job_id: str) -> dic
                   encoding="utf-8", errors="replace") as f:
             f.write(script)
 
+    # Compute quality score
+    result["quality_score"] = compute_quality_score(result)
+    notebook_json = generate_notebook(result, job_id, dataset_path, learning_objective)
+    with open(f"outputs/{job_id}/preprocessing_notebook.ipynb", "w",
+          encoding="utf-8") as f:
+        f.write(notebook_json)
+
     return result
 
 
@@ -210,6 +223,7 @@ def build_response(result: dict, job_id: str) -> dict:
         "job_id": job_id,
         "status": "completed",
         "errors": result.get("errors", []),
+        "quality_score": result.get("quality_score", {}),   # ← KEY LINE
         "summary": {
             "original_shape": profiling.get("shape", {}),
             "final_shape": {
@@ -220,17 +234,17 @@ def build_response(result: dict, job_id: str) -> dict:
             "final_columns": df_final.columns.tolist() if df_final is not None else []
         },
         "reports": {
-            "profiling": result.get("profiling_report"),
-            "imputation": result.get("imputation_report"),
-            "outlier": result.get("outlier_report"),
-            "encoding": result.get("encoding_report"),
+            "profiling":      result.get("profiling_report"),
+            "imputation":     result.get("imputation_report"),
+            "outlier":        result.get("outlier_report"),
+            "encoding":       result.get("encoding_report"),
             "transformation": result.get("transformation_report"),
             "dimensionality": result.get("dimensionality_report"),
-            "sampling": result.get("sampling_report")
+            "sampling":       result.get("sampling_report")
         },
         "downloads": {
             "dataset": f"/download/{job_id}/dataset",
-            "report": f"/download/{job_id}/report",
-            "script": f"/download/{job_id}/script"
+            "report":  f"/download/{job_id}/report",
+            "script":  f"/download/{job_id}/script"
         }
     }

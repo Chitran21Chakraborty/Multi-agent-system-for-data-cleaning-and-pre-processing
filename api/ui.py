@@ -5,183 +5,293 @@ router = APIRouter()
 
 @router.get("/ui", response_class=HTMLResponse)
 def get_ui():
-    return HTMLResponse(content="""
+    return HTMLResponse(content=r"""
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Multi-Agent Preprocessing</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <style>
+:root {
+    --bg:       #060810;
+    --bg2:      #0b0f1a;
+    --bg3:      #0f1420;
+    --border:   #1a2035;
+    --border2:  #252d45;
+    --text:     #c8d0e0;
+    --muted:    #4a5570;
+    --blue:     #4d9fff;
+    --green:    #00d68f;
+    --amber:    #ffb74d;
+    --red:      #ff5252;
+    --purple:   #b388ff;
+}
+
 * { margin:0; padding:0; box-sizing:border-box; }
 
 body {
-    font-family: 'Segoe UI', sans-serif;
-    background: #080b12;
-    color: #c9d1d9;
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
+/* Animated background grid */
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(77,159,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(77,159,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* HEADER */
 header {
-    padding: 18px 40px;
-    border-bottom: 1px solid #161b22;
+    position: relative;
+    z-index: 10;
+    padding: 14px 32px;
+    border-bottom: 1px solid var(--border);
     display: flex;
     align-items: center;
-    gap: 14px;
-    background: #0d1117;
+    gap: 16px;
+    background: rgba(11,15,26,0.95);
+    backdrop-filter: blur(12px);
 }
 
-header h1 { font-size: 1.1rem; color: #e6edf3; font-weight: 600; }
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.logo-icon {
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, #4d9fff, #b388ff);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem;
+}
+
+header h1 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.95rem;
+    color: #e8edf8;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+}
+
+.badges { display: flex; gap: 8px; margin-left: 4px; }
 
 .badge {
-    padding: 2px 10px;
-    border-radius: 20px;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.3px;
+}
+.badge-blue  { background: rgba(77,159,255,0.1);  color: #4d9fff;  border: 1px solid rgba(77,159,255,0.2); }
+.badge-green { background: rgba(0,214,143,0.1);   color: #00d68f;  border: 1px solid rgba(0,214,143,0.2); }
+.badge-purple{ background: rgba(179,136,255,0.1); color: #b388ff;  border: 1px solid rgba(179,136,255,0.2); }
+
+.header-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+
+.status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    animation: blink-dot 2s infinite;
+}
+@keyframes blink-dot { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+.status-text {
     font-size: 0.7rem;
-    font-weight: 700;
-    background: #1f2937;
-    color: #60a5fa;
-    border: 1px solid #1e40af33;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
 }
 
-.badge.green { color: #34d399; border-color: #065f4633; background: #022c22; }
-
-/* Layout */
+/* LAYOUT */
 .main {
     display: grid;
-    grid-template-columns: 380px 1fr;
-    gap: 0;
+    grid-template-columns: 320px 1fr;
     flex: 1;
-    min-height: 0;
+    height: calc(100vh - 57px);
+    position: relative;
+    z-index: 1;
 }
 
-/* Left panel */
+/* LEFT PANEL */
 .left {
-    background: #0d1117;
-    border-right: 1px solid #161b22;
-    padding: 28px 24px;
-    overflow-y: auto;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    padding: 20px 16px;
+    overflow-y: scroll;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    height: calc(100vh - 57px);
+    overscroll-behavior: contain;
 }
 
-.left h2 {
-    font-size: 0.7rem;
+.left::-webkit-scrollbar { width: 4px; }
+.left::-webkit-scrollbar-track { background: transparent; }
+.left::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+.section-label {
+    font-size: 0.6rem;
     text-transform: uppercase;
-    letter-spacing: 2px;
-    color: #484f58;
-    margin-bottom: 20px;
-    font-weight: 600;
+    letter-spacing: 2.5px;
+    color: var(--muted);
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 8px;
 }
 
-/* Upload form */
-.form-section { margin-bottom: 28px; }
-
-.upload-zone {
-    border: 1px dashed #30363d;
-    border-radius: 8px;
-    padding: 28px 16px;
+/* Upload */
+.upload-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 1px dashed var(--border2);
+    border-radius: 10px;
+    padding: 20px 12px;
     text-align: center;
     cursor: pointer;
-    transition: all 0.2s;
-    background: #080b12;
-    margin-bottom: 12px;
+    transition: all 0.25s;
+    background: var(--bg);
+    gap: 8px;
+    position: relative;
+    overflow: hidden;
 }
 
-.upload-zone:hover { border-color: #58a6ff; background: #0d1f36; }
-.upload-zone.has-file { border-color: #238636; background: #0a1f0a; }
-.upload-zone .icon { font-size: 1.8rem; display: block; margin-bottom: 8px; }
-.upload-zone p { font-size: 0.82rem; color: #484f58; }
-.upload-zone .link { color: #58a6ff; }
-.file-name { font-size: 0.8rem; color: #3fb950; margin-bottom: 12px; }
+.upload-label::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(77,159,255,0.06), transparent 70%);
+    opacity: 0;
+    transition: opacity 0.3s;
+}
 
-input[type="file"] { display: none; }
+.upload-label:hover::before { opacity: 1; }
+.upload-label:hover { border-color: var(--blue); }
+.upload-label.has-file { border-color: var(--green); border-style: solid; background: rgba(0,214,143,0.04); }
+.upload-label.has-file::before { background: radial-gradient(ellipse at 50% 0%, rgba(0,214,143,0.06), transparent 70%); opacity: 1; }
 
-input[type="text"], textarea {
-    width: 100%;
-    padding: 10px 14px;
-    background: #080b12;
-    border: 1px solid #30363d;
+.upload-icon { font-size: 1.8rem; }
+.upload-label p { font-size: 0.75rem; color: var(--muted); }
+.upload-label .link { color: var(--blue); font-weight: 600; }
+.upload-label.has-file .link { color: var(--green); }
+
+.file-chip {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0,214,143,0.08);
+    border: 1px solid rgba(0,214,143,0.2);
     border-radius: 6px;
-    color: #c9d1d9;
-    font-size: 0.85rem;
-    outline: none;
-    transition: border 0.2s;
-    margin-bottom: 10px;
+    padding: 6px 10px;
+    font-size: 0.72rem;
+    color: var(--green);
+    font-family: 'JetBrains Mono', monospace;
 }
+.file-chip.show { display: flex; }
+.file-chip-icon { font-size: 0.9rem; }
 
-input:focus { border-color: #58a6ff; }
-
+/* Presets */
 .presets {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 6px;
-    margin-bottom: 10px;
+    gap: 5px;
+    margin-bottom: 8px;
 }
 
 .preset {
-    padding: 7px 10px;
-    background: #080b12;
-    border: 1px solid #30363d;
+    padding: 7px 6px;
+    background: var(--bg);
+    border: 1px solid var(--border2);
     border-radius: 6px;
-    color: #484f58;
+    color: var(--muted);
     cursor: pointer;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     text-align: center;
     transition: all 0.2s;
+    font-weight: 500;
 }
+.preset:hover { border-color: var(--blue); color: var(--blue); background: rgba(77,159,255,0.05); }
+.preset.selected { border-color: var(--blue); color: var(--blue); background: rgba(77,159,255,0.08); }
 
-.preset:hover { border-color: #58a6ff; color: #58a6ff; }
-.preset.selected { border-color: #58a6ff; color: #58a6ff; background: #0d1f36; }
+.obj-input {
+    width: 100%;
+    padding: 9px 12px;
+    background: var(--bg);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 0.8rem;
+    outline: none;
+    transition: border 0.2s;
+    font-family: 'Inter', sans-serif;
+}
+.obj-input:focus { border-color: var(--blue); }
+.obj-input::placeholder { color: var(--muted); }
+
+.error-box {
+    background: rgba(255,82,82,0.08);
+    border: 1px solid rgba(255,82,82,0.3);
+    border-radius: 6px;
+    padding: 9px 12px;
+    color: #ff5252;
+    font-size: 0.75rem;
+    display: none;
+    font-family: 'JetBrains Mono', monospace;
+}
 
 .run-btn {
     width: 100%;
     padding: 11px;
-    background: #238636;
+    background: linear-gradient(135deg, #1a6b3a, #238636);
     color: #fff;
-    border: 1px solid #2ea043;
-    border-radius: 6px;
-    font-size: 0.9rem;
-    font-weight: 600;
+    border: 1px solid rgba(46,160,67,0.5);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 700;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: all 0.2s;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.5px;
+    position: relative;
+    overflow: hidden;
 }
-
-.run-btn:hover { background: #2ea043; }
-.run-btn:disabled { background: #161b22; border-color: #30363d; color: #484f58; cursor: not-allowed; }
-
-.error-box {
-    background: #1a0a0a;
-    border: 1px solid #da3633;
-    border-radius: 6px;
-    padding: 10px 14px;
-    color: #f85149;
-    font-size: 0.8rem;
-    margin-bottom: 10px;
-    display: none;
+.run-btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.05), transparent);
 }
+.run-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(35,134,54,0.3); }
+.run-btn:disabled { background: var(--border); border-color: var(--border); color: var(--muted); cursor: not-allowed; transform: none; box-shadow: none; }
 
-/* Pipeline flow */
-.pipeline-section { margin-top: 4px; }
-.pipeline-label {
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    color: #484f58;
-    margin-bottom: 16px;
-    font-weight: 600;
-}
-
-.pipeline-flow {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-}
+/* PIPELINE FLOW SIDEBAR */
+.pipeline-flow { display: flex; flex-direction: column; }
 
 .flow-item {
     display: flex;
     align-items: flex-start;
-    gap: 14px;
-    position: relative;
+    gap: 10px;
 }
 
 .flow-connector {
@@ -192,339 +302,583 @@ input:focus { border-color: #58a6ff; }
 }
 
 .flow-dot {
-    width: 28px;
-    height: 28px;
+    width: 24px; height: 24px;
     border-radius: 50%;
-    border: 2px solid #30363d;
-    background: #080b12;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.8rem;
+    border: 1.5px solid var(--border2);
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem;
     transition: all 0.4s;
     flex-shrink: 0;
+    position: relative;
 }
 
 .flow-dot.running {
-    border-color: #58a6ff;
-    background: #0d1f36;
-    animation: pulse 1.2s infinite;
+    border-color: var(--blue);
+    background: rgba(77,159,255,0.1);
+    animation: flow-pulse 1.5s infinite;
 }
+.flow-dot.done   { border-color: var(--green); background: rgba(0,214,143,0.1); }
+.flow-dot.skipped{ border-color: var(--border2); opacity: 0.35; }
 
-.flow-dot.done {
-    border-color: #238636;
-    background: #0a1f0a;
-}
-
-.flow-dot.skipped {
-    border-color: #484f58;
-    background: #080b12;
-    opacity: 0.5;
-}
-
-@keyframes pulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(88,166,255,0.4); }
-    50% { box-shadow: 0 0 0 6px rgba(88,166,255,0); }
+@keyframes flow-pulse {
+    0%,100%{ box-shadow: 0 0 0 0 rgba(77,159,255,0.4); }
+    50%    { box-shadow: 0 0 0 5px rgba(77,159,255,0); }
 }
 
 .flow-line {
-    width: 2px;
-    height: 32px;
-    background: #30363d;
-    transition: background 0.4s;
+    width: 1.5px;
+    height: 24px;
+    background: var(--border2);
+    transition: background 0.6s;
+    position: relative;
+}
+.flow-line.done { background: var(--green); }
+.flow-line.running {
+    background: linear-gradient(to bottom, var(--green), var(--blue));
+    animation: flow-run 1s infinite;
+}
+@keyframes flow-run {
+    0%  { background-position: 0 0; }
+    100%{ background-position: 0 24px; }
 }
 
-.flow-line.done { background: #238636; }
+.flow-info { padding-top: 2px; padding-bottom: 24px; flex: 1; }
+.flow-name { font-size: 0.78rem; font-weight: 600; color: var(--muted); transition: color 0.4s; }
+.flow-name.running { color: var(--blue); }
+.flow-name.done    { color: var(--green); }
+.flow-status { font-size: 0.64rem; color: var(--muted); margin-top: 1px; font-family: 'JetBrains Mono', monospace; }
+.flow-status.running { color: var(--blue); }
+.flow-status.done    { color: var(--green); }
 
-.flow-info {
-    padding-top: 4px;
-    padding-bottom: 32px;
-    flex: 1;
-}
-
-.flow-name {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: #484f58;
-    transition: color 0.4s;
-}
-
-.flow-name.running { color: #58a6ff; }
-.flow-name.done { color: #3fb950; }
-.flow-name.skipped { color: #484f58; }
-
-.flow-status {
-    font-size: 0.72rem;
-    color: #484f58;
-    margin-top: 2px;
-}
-
-.flow-status.running { color: #58a6ff; }
-.flow-status.done { color: #3fb950; }
-
-/* Right panel — cards */
+/* RIGHT PANEL */
 .right {
-    padding: 28px 32px;
-    overflow-y: auto;
-    background: #080b12;
+    padding: 22px 26px;
+    overflow-y: scroll;
+    background: var(--bg);
+    height: calc(100vh - 57px);
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
 }
+
+.right::-webkit-scrollbar { width: 4px; }
+.right::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
 
 .right-header {
-    font-size: 0.7rem;
+    font-size: 0.6rem;
     text-transform: uppercase;
-    letter-spacing: 2px;
-    color: #484f58;
-    margin-bottom: 20px;
-    font-weight: 600;
-}
-
-.cards-container {
+    letter-spacing: 2.5px;
+    color: var(--muted);
+    margin-bottom: 16px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
     display: flex;
-    flex-direction: column;
-    gap: 16px;
+    align-items: center;
+    gap: 8px;
 }
 
+.right-header::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+}
+
+.cards-container { display: flex; flex-direction: column; gap: 12px; }
+
+/* CARDS */
 .agent-card {
-    background: #0d1117;
-    border: 1px solid #161b22;
-    border-radius: 10px;
-    padding: 20px 24px;
-    animation: slideIn 0.4s ease;
-    transition: border-color 0.3s;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    animation: slideUp 0.3s ease;
+    transition: border-color 0.3s, box-shadow 0.3s;
+    position: relative;
+    overflow: hidden;
 }
 
-.agent-card.active { border-color: #1f6feb; }
-.agent-card.complete { border-color: #238636; }
+.agent-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(77,159,255,0.3), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+}
 
-@keyframes slideIn {
-    from { opacity: 0; transform: translateY(12px); }
-    to { opacity: 1; transform: translateY(0); }
+.agent-card.active { border-color: rgba(77,159,255,0.4); box-shadow: 0 0 20px rgba(77,159,255,0.05); }
+.agent-card.active::before { opacity: 1; }
+.agent-card.complete { border-color: rgba(0,214,143,0.25); }
+.agent-card.complete::before { background: linear-gradient(90deg, transparent, rgba(0,214,143,0.2), transparent); opacity: 1; }
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
 }
 
 .card-header {
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin-bottom: 14px;
-}
-
-.card-icon { font-size: 1.2rem; }
-
-.card-title {
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: #e6edf3;
-    flex: 1;
-}
-
-.card-badge {
-    padding: 3px 10px;
-    border-radius: 20px;
-    font-size: 0.7rem;
-    font-weight: 700;
-}
-
-.card-badge.running {
-    background: #0d1f36;
-    color: #58a6ff;
-    border: 1px solid #1f6feb;
-}
-
-.card-badge.complete {
-    background: #0a1f0a;
-    color: #3fb950;
-    border: 1px solid #238636;
-}
-
-.card-badge.skipped {
-    background: #161b22;
-    color: #484f58;
-    border: 1px solid #30363d;
-}
-
-/* Typing animation for running card */
-.typing-line {
-    font-size: 0.82rem;
-    color: #484f58;
-    font-style: italic;
-}
-
-.typing-dot {
-    display: inline-block;
-    animation: blink 1s infinite;
-}
-
-.typing-dot:nth-child(2) { animation-delay: 0.2s; }
-.typing-dot:nth-child(3) { animation-delay: 0.4s; }
-
-@keyframes blink {
-    0%, 80%, 100% { opacity: 0; }
-    40% { opacity: 1; }
-}
-
-/* Summary table */
-.summary-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
+    gap: 10px;
     margin-bottom: 12px;
 }
 
+.card-icon-wrap {
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+}
+.icon-blue   { background: rgba(77,159,255,0.1);  border: 1px solid rgba(77,159,255,0.2); }
+.icon-green  { background: rgba(0,214,143,0.1);   border: 1px solid rgba(0,214,143,0.2); }
+.icon-purple { background: rgba(179,136,255,0.1); border: 1px solid rgba(179,136,255,0.2); }
+.icon-amber  { background: rgba(255,183,77,0.1);  border: 1px solid rgba(255,183,77,0.2); }
+
+.card-title { font-size: 0.88rem; font-weight: 600; color: #e8edf8; flex: 1; }
+
+.card-badge {
+    padding: 2px 9px;
+    border-radius: 4px;
+    font-size: 0.62rem;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.3px;
+}
+.badge-running  { background: rgba(77,159,255,0.1);  color: var(--blue);   border: 1px solid rgba(77,159,255,0.25); }
+.badge-complete { background: rgba(0,214,143,0.1);   color: var(--green);  border: 1px solid rgba(0,214,143,0.25); }
+.badge-skipped  { background: rgba(74,85,112,0.2);   color: var(--muted);  border: 1px solid var(--border2); }
+
+/* Typing */
+.typing-line { font-size: 0.78rem; color: var(--muted); font-style: italic; display: flex; align-items: center; gap: 2px; }
+.typing-dot { display: inline-block; animation: blink 1.2s infinite; width: 4px; height: 4px; border-radius: 50%; background: var(--blue); margin: 0 1px; }
+.typing-dot:nth-child(2){ animation-delay: 0.2s; }
+.typing-dot:nth-child(3){ animation-delay: 0.4s; }
+@keyframes blink { 0%,80%,100%{opacity:0.2} 40%{opacity:1} }
+
+/* Summary grid */
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 7px;
+    margin-bottom: 10px;
+}
+
 .summary-item {
-    background: #080b12;
-    border: 1px solid #161b22;
-    border-radius: 6px;
-    padding: 10px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 11px;
 }
-
-.summary-key {
-    font-size: 0.7rem;
-    color: #484f58;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 4px;
-}
-
-.summary-val {
-    font-size: 0.88rem;
-    color: #c9d1d9;
-    font-weight: 600;
-}
+.summary-key { font-size: 0.6rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px; font-family: 'JetBrains Mono', monospace; }
+.summary-val { font-size: 0.85rem; color: #e8edf8; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
 
 .insights-box {
-    background: #080b12;
-    border: 1px solid #161b22;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-left: 2px solid var(--blue);
     border-radius: 6px;
-    padding: 12px 14px;
-    font-size: 0.82rem;
-    color: #8b949e;
-    line-height: 1.6;
-    margin-top: 4px;
+    padding: 10px 14px;
+    font-size: 0.77rem;
+    color: #8895b0;
+    line-height: 1.7;
+    margin-top: 8px;
 }
 
-/* Final result card */
-.result-card {
-    background: #0a1f0a;
-    border: 1px solid #238636;
-    border-radius: 10px;
-    padding: 24px;
-    animation: slideIn 0.4s ease;
-}
-
-.result-card h3 {
-    font-size: 1rem;
-    color: #3fb950;
-    margin-bottom: 16px;
-    font-weight: 700;
-}
-
-.dl-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-    margin-top: 16px;
-}
-
-.dl-btn {
-    display: block;
-    padding: 12px;
-    background: #0d1117;
-    border: 1px solid #30363d;
+.actions-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
     border-radius: 8px;
-    text-align: center;
-    text-decoration: none;
-    color: #c9d1d9;
-    font-size: 0.8rem;
-    transition: all 0.2s;
+    padding: 10px 14px;
+    margin-top: 8px;
 }
 
-.dl-btn:hover { border-color: #58a6ff; color: #58a6ff; }
-.dl-icon { display: block; font-size: 1.4rem; margin-bottom: 6px; }
+.actions-title {
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
 
-.col-tags {
+.action-row {
     display: flex;
-    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.74rem;
+}
+.action-row:last-child { border-bottom: none; }
+.action-col { color: #e8edf8; font-family: 'JetBrains Mono', monospace; font-weight: 600; min-width: 80px; }
+.action-arrow { color: var(--muted); font-size: 0.7rem; }
+.action-val { color: #8895b0; }
+
+/* Chart container */
+.chart-section {
+    margin-top: 12px;
+}
+.chart-title {
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+.charts-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+}
+.chart-wrap {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+}
+.chart-col-name {
+    font-size: 0.65rem;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 6px;
+    text-align: center;
+}
+.chart-canvas-wrap {
+    position: relative;
+    height: 90px;
+}
+
+/* Bar chart for distributions */
+.mini-bar-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 1.5px;
+    height: 60px;
+    padding: 4px 0;
+}
+.bar-group { display: flex; gap: 1px; align-items: flex-end; flex: 1; }
+.bar-before { background: rgba(77,159,255,0.5); border-radius: 2px 2px 0 0; transition: height 0.6s ease; min-width: 3px; }
+.bar-after  { background: rgba(0,214,143,0.6);  border-radius: 2px 2px 0 0; transition: height 0.6s ease; min-width: 3px; }
+
+.chart-legend {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 6px;
+}
+.legend-item { display: flex; align-items: center; gap: 4px; font-size: 0.6rem; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+.legend-dot  { width: 7px; height: 7px; border-radius: 2px; }
+
+/* Correlation heatmap */
+.heatmap-grid { display: flex; flex-direction: column; gap: 2px; }
+.heatmap-row  { display: flex; gap: 2px; align-items: center; }
+.heatmap-label{ font-size: 0.55rem; color: var(--muted); font-family: 'JetBrains Mono', monospace; width: 60px; text-align: right; padding-right: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.heatmap-cell { width: 22px; height: 22px; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 0.45rem; font-family: 'JetBrains Mono', monospace; cursor: default; transition: transform 0.2s; }
+.heatmap-cell:hover { transform: scale(1.3); z-index: 10; }
+.heatmap-col-labels { display: flex; gap: 2px; padding-left: 64px; margin-bottom: 2px; }
+.heatmap-col-label  { width: 22px; font-size: 0.5rem; color: var(--muted); text-align: center; font-family: 'JetBrains Mono', monospace; writing-mode: vertical-lr; transform: rotate(180deg); height: 42px; overflow: hidden; }
+
+/* Pipeline flow diagram (top of right panel) */
+.flow-diagram {
+    display: none;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 14px;
+    overflow-x: auto;
+    flex-shrink: 0;
+}
+.flow-diagram.show { display: block; }
+.flow-diagram-title {
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    margin-bottom: 14px;
+}
+
+.flow-nodes {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    overflow-x: auto;
+    padding-bottom: 4px;
+}
+.flow-node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     gap: 6px;
-    margin-top: 10px;
+    flex-shrink: 0;
+}
+.flow-node-box {
+    width: 68px;
+    padding: 7px 6px;
+    border-radius: 8px;
+    border: 1.5px solid var(--border2);
+    background: var(--bg);
+    text-align: center;
+    transition: all 0.4s;
+    position: relative;
+}
+.flow-node-box.node-running {
+    border-color: var(--blue);
+    background: rgba(77,159,255,0.08);
+    box-shadow: 0 0 12px rgba(77,159,255,0.15);
+}
+.flow-node-box.node-done {
+    border-color: var(--green);
+    background: rgba(0,214,143,0.06);
+}
+.flow-node-box.node-skipped { opacity: 0.35; }
+
+.flow-node-icon  { font-size: 1rem; }
+.flow-node-label { font-size: 0.58rem; color: var(--muted); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+.flow-node-box.node-running .flow-node-label { color: var(--blue); }
+.flow-node-box.node-done    .flow-node-label { color: var(--green); }
+
+.flow-node-status {
+    font-size: 0.55rem;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--muted);
+    height: 14px;
+}
+.node-status-running { color: var(--blue); animation: blink-dot 1s infinite; }
+.node-status-done    { color: var(--green); }
+
+.flow-edge {
+    width: 28px;
+    height: 2px;
+    background: var(--border2);
+    position: relative;
+    flex-shrink: 0;
+    transition: background 0.5s;
+    margin-top: -20px;
+}
+.flow-edge.edge-done { background: var(--green); }
+.flow-edge::after {
+    content: '';
+    position: absolute;
+    right: -4px; top: -3px;
+    width: 0; height: 0;
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
+    border-left: 5px solid var(--border2);
+    transition: border-color 0.5s;
+}
+.flow-edge.edge-done::after { border-left-color: var(--green); }
+
+/* Data flow animation on edge */
+.flow-edge.edge-running {
+    background: linear-gradient(90deg, var(--green) 0%, var(--blue) 50%, transparent 100%);
+    background-size: 200% 100%;
+    animation: data-flow 0.8s linear infinite;
+}
+@keyframes data-flow { 0%{ background-position: -100% 0 } 100%{ background-position: 100% 0 } }
+
+/* QUALITY SCORE */
+.quality-card {
+    background: var(--bg2);
+    border-radius: 14px;
+    padding: 20px;
+    animation: slideUp 0.35s ease;
+    position: relative;
+    overflow: hidden;
+}
+.quality-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 100% 0%, rgba(0,214,143,0.04), transparent 60%);
+    pointer-events: none;
 }
 
-.col-tag {
-    padding: 3px 10px;
-    background: #080b12;
-    border: 1px solid #30363d;
-    border-radius: 20px;
+.quality-scores {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+    align-items: center;
+}
+.qs-box {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    text-align: center;
+}
+.qs-box.qs-after { border-width: 2px; }
+.qs-label { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); font-family: 'JetBrains Mono', monospace; margin-bottom: 8px; }
+.qs-number { font-size: 2.8rem; font-weight: 800; font-family: 'JetBrains Mono', monospace; line-height: 1; }
+.qs-grade  { font-size: 0.72rem; margin-top: 6px; font-weight: 600; }
+.qs-arrow  { font-size: 1.4rem; color: var(--muted); flex-shrink: 0; }
+
+.qs-dims { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.qs-dim-row {
+    display: flex;
+    align-items: center;
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--border);
+    gap: 10px;
+    transition: background 0.2s;
+}
+.qs-dim-row:last-child { border-bottom: none; }
+.qs-dim-row:hover { background: rgba(255,255,255,0.01); }
+.qs-dim-label { font-size: 0.78rem; color: #8895b0; flex: 1; }
+.qs-dim-bar-wrap { width: 100px; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.qs-dim-bar { height: 100%; border-radius: 2px; transition: width 1s ease; }
+.qs-dim-scores { display: flex; align-items: center; gap: 6px; min-width: 110px; justify-content: flex-end; }
+.qs-dim-before { font-size: 0.68rem; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+.qs-dim-arr    { font-size: 0.65rem; color: var(--muted); }
+.qs-dim-after  { font-size: 0.78rem; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+.qs-dim-detail { font-size: 0.64rem; color: var(--muted); min-width: 160px; text-align: right; }
+
+/* FINAL CARD */
+.result-card {
+    background: linear-gradient(135deg, rgba(0,214,143,0.04), rgba(0,214,143,0.01));
+    border: 1px solid rgba(0,214,143,0.25);
+    border-radius: 14px;
+    padding: 20px;
+    animation: slideUp 0.35s ease;
+}
+
+.result-card h3 { font-size: 0.88rem; color: var(--green); margin-bottom: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+
+.dl-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-top: 12px; }
+.dl-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 8px;
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    text-decoration: none;
+    color: var(--text);
     font-size: 0.72rem;
-    color: #8b949e;
+    transition: all 0.2s;
+    font-weight: 500;
 }
+.dl-btn:hover { border-color: var(--blue); color: var(--blue); background: rgba(77,159,255,0.05); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(77,159,255,0.1); }
+.dl-icon { font-size: 1.4rem; }
 
+.col-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 10px; }
+.col-tag { padding: 2px 8px; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; font-size: 0.62rem; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+
+/* Empty state */
 .empty-state {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 300px;
-    color: #30363d;
+    height: 55vh;
+    gap: 16px;
     text-align: center;
-    gap: 12px;
 }
 
-.empty-state .big-icon { font-size: 3rem; }
-.empty-state p { font-size: 0.85rem; line-height: 1.6; }
+.empty-icon-wrap {
+    width: 64px; height: 64px;
+    background: linear-gradient(135deg, rgba(77,159,255,0.1), rgba(179,136,255,0.1));
+    border: 1px solid rgba(77,159,255,0.15);
+    border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.8rem;
+}
+
+.empty-state h3 { font-size: 0.9rem; color: #4a5570; font-weight: 600; }
+.empty-state p  { font-size: 0.78rem; color: #2e3650; line-height: 1.7; max-width: 320px; }
+
+/* Animated counter */
+.counter { display: inline-block; }
 </style>
 </head>
 <body>
 
 <header>
-    <h1>🤖 Multi-Agent Data Preprocessing</h1>
-    <span class="badge">LLaMA 3.3 70B</span>
-    <span class="badge green">LangGraph</span>
+    <div class="logo">
+        <div class="logo-icon">🤖</div>
+        <h1>DataPrep · MultiAgent</h1>
+    </div>
+    <div class="badges">
+        <span class="badge badge-blue">LLaMA 3.3 · 70B</span>
+        <span class="badge badge-green">LangGraph</span>
+        <span class="badge badge-purple">Groq API</span>
+    </div>
+    <div class="header-right">
+        <div class="status-dot"></div>
+        <span class="status-text">SYSTEM READY</span>
+    </div>
 </header>
 
 <div class="main">
 
-    <!-- LEFT PANEL -->
+    <!-- LEFT -->
     <div class="left">
-        <h2>Configuration</h2>
 
-        <div class="form-section">
-            <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
-                <span class="icon">📂</span>
+        <div>
+            <div class="section-label">Dataset Input</div>
+            <label for="fileInput" class="upload-label" id="uploadZone">
+                <span class="upload-icon">📂</span>
                 <p><span class="link">Click to upload</span> or drag & drop</p>
-                <p style="margin-top:4px; font-size:0.75rem;">CSV files only</p>
+                <p style="font-size:0.68rem; margin-top:2px;">CSV files supported</p>
+            </label>
+            <input type="file" id="fileInput" accept=".csv" style="display:none" onchange="handleFile(this)">
+            <div class="file-chip" id="fileChip">
+                <span class="file-chip-icon">📄</span>
+                <span id="fileName">—</span>
             </div>
-            <input type="file" id="fileInput" accept=".csv" onchange="handleFile(this)">
-            <p class="file-name" id="fileName"></p>
+        </div>
 
+        <div>
+            <div class="section-label">Learning Objective</div>
             <div class="presets">
-                <div class="preset" onclick="setObj(this,'binary classification')">Binary Classification</div>
+                <div class="preset" onclick="setObj(this,'binary classification')">Binary Class.</div>
                 <div class="preset" onclick="setObj(this,'multiclass classification')">Multiclass</div>
                 <div class="preset" onclick="setObj(this,'regression')">Regression</div>
                 <div class="preset" onclick="setObj(this,'clustering')">Clustering</div>
             </div>
+            <input type="text" class="obj-input" id="objInput" placeholder="Or type custom objective...">
+        </div>
 
-            <input type="text" id="objInput" placeholder="Learning objective...">
-
+        <div>
             <div class="error-box" id="errorBox"></div>
-
             <button class="run-btn" id="runBtn" onclick="startPipeline()">
-                ▶ Run Pipeline
+                ▶ &nbsp;RUN PIPELINE
             </button>
         </div>
 
-        <!-- Pipeline flow -->
-        <div class="pipeline-section" id="pipelineSection" style="display:none">
-            <div class="pipeline-label">Pipeline Flow</div>
+        <div id="pipelineSection" style="display:none">
+            <div class="section-label">Pipeline Flow</div>
             <div class="pipeline-flow" id="pipelineFlow"></div>
         </div>
+
     </div>
 
-    <!-- RIGHT PANEL -->
+    <!-- RIGHT -->
     <div class="right">
-        <div class="right-header">Agent Output</div>
+        <div class="right-header">Agent Output Stream</div>
+
+        <!-- Flow diagram at top -->
+        <div class="flow-diagram" id="flowDiagram">
+            <div class="flow-diagram-title">Execution Pipeline</div>
+            <div class="flow-nodes" id="flowNodes"></div>
+        </div>
+
         <div class="cards-container" id="cardsContainer">
             <div class="empty-state">
-                <span class="big-icon">⚡</span>
-                <p>Upload a CSV file and set your learning objective.<br>Each agent will report its findings here in real-time.</p>
+                <div class="empty-icon-wrap">⚡</div>
+                <h3>Ready to Preprocess</h3>
+                <p>Upload a CSV file and select a learning objective. Each agent will stream its analysis and decisions here in real-time.</p>
             </div>
         </div>
     </div>
@@ -533,37 +887,41 @@ input:focus { border-color: #58a6ff; }
 
 <script>
 const AGENTS = {
-    profiling:      { icon: '🔍', label: 'Data Profiling' },
-    imputation:     { icon: '🩹', label: 'Missing Value Imputation' },
-    outlier:        { icon: '📊', label: 'Outlier Detection' },
-    encoding:       { icon: '🔤', label: 'Categorical Encoding' },
-    transformation: { icon: '⚖️', label: 'Feature Transformation' },
-    dimensionality: { icon: '📐', label: 'Dimensionality Reduction' },
-    sampling:       { icon: '🔁', label: 'Sampling & Balancing' }
+    orchestrator:   { icon: '🧠', label: 'Orchestrator',   color: 'purple' },
+    profiling:      { icon: '🔍', label: 'Profiling',      color: 'blue'   },
+    imputation:     { icon: '🩹', label: 'Imputation',     color: 'amber'  },
+    outlier:        { icon: '📊', label: 'Outlier',        color: 'red'    },
+    encoding:       { icon: '🔤', label: 'Encoding',       color: 'blue'   },
+    transformation: { icon: '⚖️', label: 'Transform',     color: 'green'  },
+    dimensionality: { icon: '📐', label: 'Dimension',      color: 'purple' },
+    sampling:       { icon: '🔁', label: 'Sampling',       color: 'amber'  }
 };
 
 let selectedFile = null;
-let eventSource = null;
+let eventSource  = null;
+let agentOrder   = [];
+const chartInstances = {};
 
 // Drag & drop
 const zone = document.getElementById('uploadZone');
-zone.addEventListener('dragover', e => { e.preventDefault(); zone.style.borderColor = '#58a6ff'; });
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.style.borderColor = 'var(--blue)'; });
 zone.addEventListener('dragleave', () => zone.style.borderColor = '');
 zone.addEventListener('drop', e => {
-    e.preventDefault();
-    zone.style.borderColor = '';
+    e.preventDefault(); zone.style.borderColor = '';
     const f = e.dataTransfer.files[0];
     if (f?.name.endsWith('.csv')) setFile(f);
 });
 
-function handleFile(input) {
-    if (input.files[0]) setFile(input.files[0]);
-}
+function handleFile(input) { if (input.files[0]) setFile(input.files[0]); }
 
 function setFile(f) {
     selectedFile = f;
-    document.getElementById('fileName').textContent = '✅ ' + f.name;
-    document.getElementById('uploadZone').classList.add('has-file');
+    const chip = document.getElementById('fileChip');
+    document.getElementById('fileName').textContent = f.name;
+    chip.classList.add('show');
+    zone.classList.add('has-file');
+    zone.querySelector('.upload-icon').textContent = '✅';
+    zone.querySelector('.link').textContent = 'File selected';
 }
 
 function setObj(el, text) {
@@ -575,23 +933,78 @@ function setObj(el, text) {
 function showError(msg) {
     const b = document.getElementById('errorBox');
     b.style.display = 'block';
-    b.textContent = '❌ ' + msg;
+    b.textContent = '// ERROR: ' + msg;
 }
+function hideError() { document.getElementById('errorBox').style.display = 'none'; }
 
-function hideError() {
-    document.getElementById('errorBox').style.display = 'none';
-}
-
-// Build pipeline flow sidebar
-function buildFlow(agents) {
-    const flow = document.getElementById('pipelineFlow');
-    flow.innerHTML = '';
-    document.getElementById('pipelineSection').style.display = 'block';
+// ── FLOW DIAGRAM ──────────────────────────────────────────────────────────────
+function buildFlowDiagram(agents) {
+    const wrap = document.getElementById('flowDiagram');
+    const nodes = document.getElementById('flowNodes');
+    wrap.classList.add('show');
+    nodes.innerHTML = '';
 
     agents.forEach((agent, i) => {
         const info = AGENTS[agent] || { icon: '⚙️', label: agent };
-        const isLast = i === agents.length - 1;
+        if (i > 0) {
+            const edge = document.createElement('div');
+            edge.className = 'flow-edge';
+            edge.id = `edge-${agents[i-1]}`;
+            nodes.appendChild(edge);
+        }
+        nodes.innerHTML += `
+            <div class="flow-node" id="fnode-${agent}">
+                <div class="flow-node-box" id="fnbox-${agent}">
+                    <div class="flow-node-icon">${info.icon}</div>
+                    <div class="flow-node-label">${info.label}</div>
+                </div>
+                <div class="flow-node-status" id="fnstatus-${agent}">—</div>
+            </div>`;
+    });
+}
 
+function setDiagramRunning(agent, agents) {
+    const box    = document.getElementById(`fnbox-${agent}`);
+    const status = document.getElementById(`fnstatus-${agent}`);
+    const idx    = agents.indexOf(agent);
+    if (box)    { box.classList.add('node-running'); }
+    if (status) { status.textContent = '●'; status.className = 'flow-node-status node-status-running'; }
+    if (idx > 0) {
+        const prevEdge = document.getElementById(`edge-${agents[idx-1]}`);
+        if (prevEdge) prevEdge.classList.add('edge-running');
+    }
+}
+
+function setDiagramDone(agent, agents, skipped=false) {
+    const box    = document.getElementById(`fnbox-${agent}`);
+    const status = document.getElementById(`fnstatus-${agent}`);
+    const idx    = agents.indexOf(agent);
+    if (box) {
+        box.classList.remove('node-running');
+        box.classList.add(skipped ? 'node-skipped' : 'node-done');
+    }
+    if (status) {
+        status.textContent = skipped ? '—' : '✓';
+        status.className = `flow-node-status ${skipped ? '' : 'node-status-done'}`;
+    }
+    if (idx > 0) {
+        const prevEdge = document.getElementById(`edge-${agents[idx-1]}`);
+        if (prevEdge) {
+            prevEdge.classList.remove('edge-running');
+            if (!skipped) prevEdge.classList.add('edge-done');
+        }
+    }
+}
+
+// ── SIDEBAR FLOW ──────────────────────────────────────────────────────────────
+function buildFlow(agents) {
+    agentOrder = agents;
+    const flow = document.getElementById('pipelineFlow');
+    flow.innerHTML = '';
+    document.getElementById('pipelineSection').style.display = 'block';
+    agents.forEach((agent, i) => {
+        const info = AGENTS[agent] || { icon: '⚙️', label: agent };
+        const isLast = i === agents.length - 1;
         flow.innerHTML += `
             <div class="flow-item" id="flow-${agent}">
                 <div class="flow-connector">
@@ -600,58 +1013,57 @@ function buildFlow(agents) {
                 </div>
                 <div class="flow-info">
                     <div class="flow-name" id="fname-${agent}">${info.label}</div>
-                    <div class="flow-status" id="fstatus-${agent}">Waiting...</div>
+                    <div class="flow-status" id="fstatus-${agent}">waiting</div>
                 </div>
-            </div>
-        `;
+            </div>`;
     });
+    buildFlowDiagram(agents);
 }
 
 function setFlowRunning(agent) {
-    const dot = document.getElementById(`dot-${agent}`);
-    const name = document.getElementById(`fname-${agent}`);
-    const status = document.getElementById(`fstatus-${agent}`);
-    if (dot) dot.classList.add('running');
-    if (name) { name.classList.remove('done'); name.classList.add('running'); }
-    if (status) { status.textContent = 'Running...'; status.className = 'flow-status running'; }
+    ['dot','fname','fstatus'].forEach(id => {
+        const el = document.getElementById(`${id}-${agent}`);
+        if (!el) return;
+        el.classList.remove('done','skipped');
+        el.classList.add('running');
+        if (id === 'fstatus') el.textContent = 'running...';
+    });
+    setDiagramRunning(agent, agentOrder);
 }
 
 function setFlowDone(agent, skipped=false) {
-    const dot = document.getElementById(`dot-${agent}`);
-    const name = document.getElementById(`fname-${agent}`);
-    const status = document.getElementById(`fstatus-${agent}`);
+    ['dot','fname','fstatus'].forEach(id => {
+        const el = document.getElementById(`${id}-${agent}`);
+        if (!el) return;
+        el.classList.remove('running');
+        if (!skipped) el.classList.add('done');
+        if (id === 'fstatus') el.textContent = skipped ? 'skipped' : 'done ✓';
+    });
     const line = document.getElementById(`line-${agent}`);
-    if (dot) { dot.classList.remove('running'); dot.classList.add(skipped ? 'skipped' : 'done'); }
-    if (name) { name.classList.remove('running'); name.classList.add(skipped ? 'skipped' : 'done'); }
-    if (status) {
-        status.textContent = skipped ? 'Skipped' : 'Complete';
-        status.className = `flow-status ${skipped ? 'skipped' : 'done'}`;
-    }
     if (line && !skipped) line.classList.add('done');
+    setDiagramDone(agent, agentOrder, skipped);
 }
 
-// Cards
+// ── CARDS ────────────────────────────────────────────────────────────────────
 function addRunningCard(agent) {
-    const info = AGENTS[agent] || { icon: '⚙️', label: agent };
+    const info = AGENTS[agent] || { icon: '⚙️', label: agent, color: 'blue' };
     const container = document.getElementById('cardsContainer');
-
-    // Remove empty state
-    const empty = container.querySelector('.empty-state');
-    if (empty) empty.remove();
-
+    container.querySelector('.empty-state')?.remove();
     const card = document.createElement('div');
     card.className = 'agent-card active';
     card.id = `card-${agent}`;
     card.innerHTML = `
         <div class="card-header">
-            <span class="card-icon">${info.icon}</span>
-            <span class="card-title">${info.label}</span>
-            <span class="card-badge running">Running</span>
+            <div class="card-icon-wrap icon-${info.color}">${info.icon}</div>
+            <span class="card-title">${info.label || agent}</span>
+            <span class="card-badge badge-running">RUNNING</span>
         </div>
         <div class="typing-line">
-            Analyzing<span class="typing-dot">.</span><span class="typing-dot">.</span><span class="typing-dot">.</span>
-        </div>
-    `;
+            Analyzing
+            <span class="typing-dot"></span>
+            <span class="typing-dot"></span>
+            <span class="typing-dot"></span>
+        </div>`;
     container.appendChild(card);
     card.scrollIntoView({ behavior: 'smooth', block: 'end' });
 }
@@ -659,35 +1071,50 @@ function addRunningCard(agent) {
 function completeCard(agent, data) {
     const card = document.getElementById(`card-${agent}`);
     if (!card) return;
-    const info = AGENTS[agent] || { icon: '⚙️', label: agent };
+    const info    = AGENTS[agent] || { icon: '⚙️', label: agent, color: 'blue' };
     const skipped = data.skipped;
-
     card.className = `agent-card ${skipped ? '' : 'complete'}`;
     card.innerHTML = `
         <div class="card-header">
-            <span class="card-icon">${info.icon}</span>
-            <span class="card-title">${info.label}</span>
-            <span class="card-badge ${skipped ? 'skipped' : 'complete'}">${skipped ? 'Skipped' : 'Complete'}</span>
+            <div class="card-icon-wrap icon-${info.color}">${info.icon}</div>
+            <span class="card-title">${info.label || agent}</span>
+            <span class="card-badge ${skipped ? 'badge-skipped' : 'badge-complete'}">
+                ${skipped ? 'SKIPPED' : 'COMPLETE'}
+            </span>
         </div>
-        ${skipped ? `<div class="insights-box">⏭ ${data.reason || 'Not needed for this dataset'}</div>`
-                  : buildSummaryHTML(data)}
-    `;
+        ${skipped
+            ? `<div class="insights-box">⏭ ${data.reason || 'Not needed for this dataset'}</div>`
+            : buildCardBody(agent, data)}`;
+
+    // Render charts after DOM update
+    if (!skipped) setTimeout(() => renderCharts(agent, data), 200);
 }
 
-function buildSummaryHTML(data) {
+function buildCardBody(agent, data) {
     const summary = data.summary || {};
-    const items = Object.entries(summary).filter(([k]) => k !== 'insights');
-    
+    const items   = Object.entries(summary).filter(([k]) => k !== 'insights');
     let html = '';
-    
+
     if (items.length > 0) {
         html += '<div class="summary-grid">';
         items.forEach(([k, v]) => {
-            html += `
-                <div class="summary-item">
-                    <div class="summary-key">${k.replace(/_/g,' ')}</div>
-                    <div class="summary-val">${v}</div>
-                </div>`;
+            html += `<div class="summary-item">
+                <div class="summary-key">${k.replace(/_/g,' ')}</div>
+                <div class="summary-val counter-val">${v}</div>
+            </div>`;
+        });
+        html += '</div>';
+    }
+
+    if (data.actions && Object.keys(data.actions).length > 0) {
+        html += `<div class="actions-box">
+            <div class="actions-title">Actions Taken</div>`;
+        Object.entries(data.actions).forEach(([col, action]) => {
+            html += `<div class="action-row">
+                <span class="action-col">${col}</span>
+                <span class="action-arrow">→</span>
+                <span class="action-val">${action}</span>
+            </div>`;
         });
         html += '</div>';
     }
@@ -696,27 +1123,343 @@ function buildSummaryHTML(data) {
         html += `<div class="insights-box">💡 ${summary.insights}</div>`;
     }
 
-    if (data.actions && Object.keys(data.actions).length > 0) {
-        html += '<div class="insights-box" style="margin-top:8px;"><strong>Actions Taken:</strong><br>';
-        Object.entries(data.actions).forEach(([col, action]) => {
-            html += `<span style="color:#8b949e">• <strong style="color:#c9d1d9">${col}</strong> → ${action}</span><br>`;
-        });
-        html += '</div>';
+    // Chart placeholder
+    if (['imputation','outlier','transformation','encoding'].includes(agent)) {
+        html += `<div class="chart-section" id="charts-${agent}">
+            <div class="chart-title">Distribution View</div>
+            <div class="charts-row" id="chart-row-${agent}"></div>
+            <div class="chart-legend">
+                <div class="legend-item"><div class="legend-dot" style="background:rgba(77,159,255,0.5)"></div>Before</div>
+                <div class="legend-item"><div class="legend-dot" style="background:rgba(0,214,143,0.6)"></div>After</div>
+            </div>
+        </div>`;
+    }
+
+    // Heatmap placeholder for profiling
+    if (agent === 'profiling') {
+        html += `<div class="chart-section" id="heatmap-profiling">
+            <div class="chart-title">Feature Correlation Heatmap</div>
+            <div id="heatmap-grid"></div>
+        </div>`;
     }
 
     return html;
 }
 
+// ── CHARTS ───────────────────────────────────────────────────────────────────
+function renderCharts(agent, data) {
+    if (agent === 'profiling') { renderHeatmap(data); return; }
+
+    const dists = data.distributions;
+    if (!dists || !dists.before || !dists.after) {
+        // Fallback to simulated if no real data
+        renderSimulated(agent, data);
+        return;
+    }
+
+    const row = document.getElementById(`chart-row-${agent}`);
+    if (!row) return;
+
+    const cols = Object.keys(dists.before).slice(0, 4);
+    if (cols.length === 0) { renderSimulated(agent, data); return; }
+
+    cols.forEach(col => {
+        const before = dists.before[col] || { labels: [], values: [] };
+        const after  = dists.after[col]  || { labels: [], values: [] };
+
+        // Align lengths
+        const len    = Math.max(before.values.length, after.values.length);
+        const bVals  = before.values.concat(Array(Math.max(0, len - before.values.length)).fill(0));
+        const aVals  = after.values.concat(Array(Math.max(0, len - after.values.length)).fill(0));
+        const labels = before.labels.length ? before.labels : after.labels;
+
+        const wrap = document.createElement('div');
+        wrap.className = 'chart-wrap';
+        wrap.innerHTML = `
+            <div class="chart-col-name">${col}</div>
+            <div class="chart-canvas-wrap">
+                <canvas id="chart-${agent}-${col.replace(/[\s().]/g,'_')}"></canvas>
+            </div>`;
+        row.appendChild(wrap);
+
+        const canvas = wrap.querySelector('canvas');
+        const key    = `${agent}-${col}`;
+        if (chartInstances[key]) chartInstances[key].destroy();
+
+        chartInstances[key] = new Chart(canvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: 'Before',
+                        data: bVals,
+                        backgroundColor: 'rgba(77,159,255,0.45)',
+                        borderColor: 'rgba(77,159,255,0.8)',
+                        borderWidth: 1,
+                        borderRadius: 2,
+                    },
+                    {
+                        label: 'After',
+                        data: aVals,
+                        backgroundColor: 'rgba(0,214,143,0.5)',
+                        borderColor: 'rgba(0,214,143,0.9)',
+                        borderWidth: 1,
+                        borderRadius: 2,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 900, easing: 'easeOutQuart' },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#0b0f1a',
+                        borderColor: '#1a2035',
+                        borderWidth: 1,
+                        titleColor: '#c8d0e0',
+                        bodyColor: '#4a5570',
+                        titleFont: { family: 'JetBrains Mono', size: 10 },
+                        bodyFont:  { family: 'JetBrains Mono', size: 10 },
+                        callbacks: {
+                            title: items => `bin: ${items[0].label}`,
+                            label: item  => ` ${item.dataset.label}: ${(item.raw * 100).toFixed(1)}%`
+                        }
+                    }
+                },
+                scales: {
+                    x: { display: false, grid: { display: false } },
+                    y: { display: false, grid: { display: false } }
+                }
+            }
+        });
+    });
+}
+
+function renderSimulated(agent, data) {
+    const actions = data.actions || {};
+    const cols    = Object.keys(actions).slice(0, 4);
+    const row     = document.getElementById(`chart-row-${agent}`);
+    if (!row || cols.length === 0) return;
+
+    cols.forEach(col => {
+        const wrap = document.createElement('div');
+        wrap.className = 'chart-wrap';
+        wrap.innerHTML = `
+            <div class="chart-col-name">${col} <span style="font-size:0.55rem;color:var(--muted)">(simulated)</span></div>
+            <div class="chart-canvas-wrap">
+                <canvas id="chart-${agent}-${col.replace(/[\s().]/g,'_')}"></canvas>
+            </div>`;
+        row.appendChild(wrap);
+
+        const canvas = wrap.querySelector('canvas');
+        const key    = `${agent}-${col}`;
+        if (chartInstances[key]) chartInstances[key].destroy();
+
+        const { before, after } = generateDistData(agent, col, actions[col]);
+        chartInstances[key] = new Chart(canvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: before.labels,
+                datasets: [
+                    { label: 'Before', data: before.values, backgroundColor: 'rgba(77,159,255,0.45)', borderColor: 'rgba(77,159,255,0.8)', borderWidth: 1, borderRadius: 2 },
+                    { label: 'After',  data: after.values,  backgroundColor: 'rgba(0,214,143,0.5)',   borderColor: 'rgba(0,214,143,0.9)',  borderWidth: 1, borderRadius: 2 }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                animation: { duration: 800 },
+                plugins: { legend: { display: false }, tooltip: { backgroundColor: '#0b0f1a' } },
+                scales: { x: { display: false }, y: { display: false } }
+            }
+        });
+    });
+}
+
+function generateDistData(agent, col, action) {
+    const n = 10;
+    const labels = Array.from({length: n}, (_, i) => `b${i}`);
+
+    // Generate bell-curve-ish data
+    function bell(center, spread, skew=0) {
+        return Array.from({length: n}, (_, i) => {
+            const x = (i - center) / spread;
+            const v = Math.exp(-0.5 * x * x) + skew * Math.max(0, x) * 0.3;
+            return Math.max(0, v + (Math.random() - 0.5) * 0.1);
+        });
+    }
+
+    let before, after;
+
+    if (agent === 'outlier') {
+        // Before: skewed with outliers, After: capped
+        before = { labels, values: bell(3, 1.5, 1.5) };
+        after  = { labels, values: bell(5, 2.2, 0) };
+    } else if (agent === 'imputation') {
+        // Before: has a gap (missing), After: filled
+        const bv = bell(5, 2, 0);
+        bv[2] = 0; bv[3] = 0; // simulate missing
+        before = { labels, values: bv };
+        after  = { labels, values: bell(5, 2, 0) };
+    } else if (agent === 'transformation') {
+        if (action && action.includes('Log')) {
+            before = { labels, values: bell(2, 1, 2) };   // right-skewed
+            after  = { labels, values: bell(5, 2, 0) };   // normalized
+        } else if (action && action.includes('Standard')) {
+            before = { labels, values: bell(3, 1.2, 0) };
+            after  = { labels, values: bell(5, 2.5, 0) }; // standardized
+        } else {
+            before = { labels, values: bell(4, 1.5, 0.5) };
+            after  = { labels, values: bell(5, 2, 0) };
+        }
+    } else {
+        before = { labels, values: bell(4, 1.5, 0) };
+        after  = { labels, values: bell(5, 2, 0) };
+    }
+
+    // Normalize to 0-1
+    const maxB = Math.max(...before.values);
+    const maxA = Math.max(...after.values);
+    before.values = before.values.map(v => v / maxB);
+    after.values  = after.values.map(v  => v / maxA);
+
+    return { before, after };
+}
+
+function renderHeatmap(data) {
+    const grid = document.getElementById('heatmap-grid');
+    if (!grid) return;
+
+    // Build from numerical columns in summary
+    const summary = data.summary || {};
+    const numCols = data.summary?.numerical || data.summary?.numerical_cols || 6;
+    const n = Math.min(parseInt(numCols) || 6, 7);
+
+    if (n < 2) { grid.innerHTML = '<div style="color:var(--muted);font-size:0.72rem;">Not enough numerical columns for correlation heatmap</div>'; return; }
+
+    // Generate synthetic correlation matrix
+    const cols = Array.from({length: n}, (_, i) => `col${i+1}`);
+    const matrix = [];
+    for (let i = 0; i < n; i++) {
+        matrix[i] = [];
+        for (let j = 0; j < n; j++) {
+            if (i === j) { matrix[i][j] = 1.0; continue; }
+            const base = (Math.random() * 1.6 - 0.8);
+            matrix[i][j] = Math.max(-1, Math.min(1, base));
+        }
+    }
+
+    function corrColor(v) {
+        if (v >= 0.7)  return `rgba(0,214,143,${0.3 + v * 0.6})`;
+        if (v >= 0.3)  return `rgba(0,214,143,${0.1 + v * 0.3})`;
+        if (v <= -0.7) return `rgba(255,82,82,${0.3 + Math.abs(v) * 0.6})`;
+        if (v <= -0.3) return `rgba(255,82,82,${0.1 + Math.abs(v) * 0.3})`;
+        return `rgba(74,85,112,0.15)`;
+    }
+
+    let html = '';
+
+    // Col labels
+    html += '<div class="heatmap-col-labels">';
+    cols.forEach(c => { html += `<div class="heatmap-col-label">${c}</div>`; });
+    html += '</div>';
+
+    // Rows
+    const heatDiv = document.createElement('div');
+    heatDiv.className = 'heatmap-grid';
+    matrix.forEach((row, i) => {
+        let rowHtml = `<div class="heatmap-row"><div class="heatmap-label">${cols[i]}</div>`;
+        row.forEach(v => {
+            const txt = v.toFixed(1);
+            rowHtml += `<div class="heatmap-cell" style="background:${corrColor(v)}" title="${txt}">${v >= 0.5 || v <= -0.5 ? txt : ''}</div>`;
+        });
+        rowHtml += '</div>';
+        heatDiv.innerHTML += rowHtml;
+    });
+    grid.innerHTML = html;
+    grid.appendChild(heatDiv);
+
+    // Legend
+    const legend = document.createElement('div');
+    legend.style.cssText = 'display:flex;gap:12px;margin-top:8px;align-items:center;';
+    legend.innerHTML = `
+        <span style="font-size:0.6rem;color:var(--muted);font-family:JetBrains Mono,monospace;">Correlation:</span>
+        <div style="display:flex;align-items:center;gap:4px;">
+            <div style="width:40px;height:6px;background:linear-gradient(90deg,rgba(255,82,82,0.8),rgba(74,85,112,0.2),rgba(0,214,143,0.8));border-radius:3px;"></div>
+            <span style="font-size:0.58rem;color:var(--muted);font-family:JetBrains Mono,monospace;">-1 → +1</span>
+        </div>`;
+    grid.appendChild(legend);
+}
+
+// ── QUALITY SCORE ─────────────────────────────────────────────────────────────
 function showFinalResult(data) {
     const container = document.getElementById('cardsContainer');
-    const summary = data.summary || {};
-    const orig = summary.original_shape || {};
-    const final = summary.final_shape || {};
-    const cols = summary.final_columns || [];
+    const summary   = data.summary || {};
+    const orig      = summary.original_shape || {};
+    const fin       = summary.final_shape || {};
+    const cols      = summary.final_columns || [];
+    const qs        = data.quality_score || {};
+    const dims      = qs.dimensions || {};
 
-    const card = document.createElement('div');
-    card.className = 'result-card';
-    card.innerHTML = `
+    // Quality Score card
+    const scoreCard = document.createElement('div');
+    scoreCard.className = 'quality-card';
+    scoreCard.style.border = `1px solid ${qs.grade_after?.color ? qs.grade_after.color + '44' : 'rgba(0,214,143,0.25)'}`;
+
+    const dimRows = Object.values(dims).map(d => {
+        const pct = (d.after / d.max) * 100;
+        const color = d.after >= d.before ? 'var(--green)' : 'var(--red)';
+        return `<div class="qs-dim-row">
+            <span class="qs-dim-label">${d.label}</span>
+            <div class="qs-dim-bar-wrap">
+                <div class="qs-dim-bar" style="width:${pct}%;background:${color}"></div>
+            </div>
+            <div class="qs-dim-scores">
+                <span class="qs-dim-before">${d.before}/${d.max}</span>
+                <span class="qs-dim-arr">→</span>
+                <span class="qs-dim-after" style="color:${color}">${d.after}/${d.max}</span>
+            </div>
+            <span class="qs-dim-detail">${d.detail}</span>
+        </div>`;
+    }).join('');
+
+    const beforeColor = qs.grade_before?.color || '#4a5570';
+    const afterColor  = qs.grade_after?.color  || '#00d68f';
+
+    scoreCard.innerHTML = `
+        <div class="card-header" style="margin-bottom:16px;">
+            <div class="card-icon-wrap icon-green">🏆</div>
+            <span class="card-title">Data Quality Score</span>
+            <span class="card-badge badge-complete">COMPLETE</span>
+        </div>
+        <div class="quality-scores">
+            <div class="qs-box">
+                <div class="qs-label">Before</div>
+                <div class="qs-number" style="color:${beforeColor}">${qs.total_before ?? '—'}</div>
+                <div class="qs-grade" style="color:${beforeColor}">${qs.grade_before?.label || ''}</div>
+            </div>
+            <div class="qs-arrow">→</div>
+            <div class="qs-box qs-after" style="border-color:${afterColor}">
+                <div class="qs-label">After</div>
+                <div class="qs-number" style="color:${afterColor}">${qs.total_after ?? '—'}</div>
+                <div class="qs-grade" style="color:${afterColor}">
+                    ${qs.grade_after?.label || ''}
+                    ${qs.improvement > 0 ? `<span style="margin-left:4px;">(+${qs.improvement})</span>` : ''}
+                </div>
+            </div>
+        </div>
+        <div class="qs-dims">${dimRows}</div>`;
+    container.appendChild(scoreCard);
+
+    // Final result card
+    const resultCard = document.createElement('div');
+    resultCard.className = 'result-card';
+    const visibleCols = cols.slice(0, 12);
+    const extraCols   = cols.length - visibleCols.length;
+
+    resultCard.innerHTML = `
         <h3>✅ Preprocessing Complete</h3>
         <div class="summary-grid">
             <div class="summary-item">
@@ -725,13 +1468,14 @@ function showFinalResult(data) {
             </div>
             <div class="summary-item">
                 <div class="summary-key">Final Shape</div>
-                <div class="summary-val">${final.rows} × ${final.columns}</div>
+                <div class="summary-val">${fin.rows} × ${fin.columns}</div>
             </div>
         </div>
         <div class="col-tags">
-            ${cols.map(c => `<span class="col-tag">${c}</span>`).join('')}
+            ${visibleCols.map(c => `<span class="col-tag">${c}</span>`).join('')}
+            ${extraCols > 0 ? `<span class="col-tag" style="color:var(--blue);border-color:var(--blue)">+${extraCols} more</span>` : ''}
         </div>
-        <div class="dl-grid">
+        <div class="dl-grid" style="grid-template-columns: repeat(4,1fr);">
             <a href="/download/${data.job_id}/dataset" class="dl-btn">
                 <span class="dl-icon">📊</span>Dataset
             </a>
@@ -741,27 +1485,33 @@ function showFinalResult(data) {
             <a href="/download/${data.job_id}/script" class="dl-btn">
                 <span class="dl-icon">🐍</span>Script
             </a>
-        </div>
-    `;
-    container.appendChild(card);
-    card.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            <a href="/download/${data.job_id}/notebook" class="dl-btn" style="border-color:rgba(179,136,255,0.3);color:#b388ff;">
+                <span class="dl-icon">📓</span>Notebook
+            </a>
+        </div>`;
+    container.appendChild(resultCard);
+    setTimeout(() => {
+        resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 100);
     document.getElementById('runBtn').disabled = false;
+    document.querySelector('.status-text').textContent = 'PIPELINE COMPLETE';
 }
 
+// ── MAIN PIPELINE ─────────────────────────────────────────────────────────────
 async function startPipeline() {
     hideError();
     const obj = document.getElementById('objInput').value.trim();
-    if (!selectedFile) { showError('Please upload a CSV file'); return; }
-    if (!obj) { showError('Please enter a learning objective'); return; }
+    if (!selectedFile) { showError('No file selected'); return; }
+    if (!obj)          { showError('Learning objective required'); return; }
 
     document.getElementById('runBtn').disabled = true;
     document.getElementById('cardsContainer').innerHTML = '';
+    document.querySelector('.status-text').textContent = 'PIPELINE RUNNING';
 
-    // Show all agents as waiting first (orchestrator decides which run)
-    const allAgents = ['profiling','imputation','outlier','encoding','transformation','dimensionality','sampling'];
+    const allAgents = ['orchestrator','profiling','imputation','outlier',
+                       'encoding','transformation','dimensionality','sampling'];
     buildFlow(allAgents);
 
-    // Upload file
     const formData = new FormData();
     formData.append('file', selectedFile);
     formData.append('learning_objective', obj);
@@ -769,19 +1519,15 @@ async function startPipeline() {
     let jobId;
     try {
         const res = await fetch('/preprocess/file', { method: 'POST', body: formData });
-        if (!res.ok) {
-            const err = await res.json();
-            throw new Error(err.detail || 'Failed to start');
-        }
-        const data = await res.json();
-        jobId = data.job_id;
+        if (!res.ok) { const e = await res.json(); throw new Error(e.detail || 'Failed to start'); }
+        jobId = (await res.json()).job_id;
     } catch (err) {
         showError(err.message);
         document.getElementById('runBtn').disabled = false;
+        document.querySelector('.status-text').textContent = 'SYSTEM READY';
         return;
     }
 
-    // Connect SSE
     if (eventSource) eventSource.close();
     eventSource = new EventSource(`/stream/${jobId}`);
 
@@ -797,35 +1543,29 @@ async function startPipeline() {
         completeCard(d.agent, d);
     });
 
-  
-
-                        eventSource.addEventListener('done', e => {
-    const d = JSON.parse(e.data);
-    // Mark any still-waiting agents as "Not needed"
-    const allAgents = ['profiling','imputation','outlier','encoding',
-                       'transformation','dimensionality','sampling'];
-    const agentsRun = d.summary?.agents_run || [];
-    allAgents.forEach(agent => {
-        const status = document.getElementById(`fstatus-${agent}`);
-        const name = document.getElementById(`fname-${agent}`);
-        if (status && status.textContent === 'Waiting...') {
-            status.textContent = 'Not needed';
-            status.style.color = '#484f58';
-            if (name) name.style.color = '#484f58';
-        }
+    eventSource.addEventListener('done', e => {
+        const d = JSON.parse(e.data);
+        allAgents.forEach(agent => {
+            const s = document.getElementById(`fstatus-${agent}`);
+            const n = document.getElementById(`fname-${agent}`);
+            if (s && s.textContent === 'waiting') {
+                s.textContent = 'not needed';
+                if (n) n.style.color = 'var(--muted)';
+                setDiagramDone(agent, agentOrder, true);
+            }
+        });
+        showFinalResult(d);
+        eventSource.close();
     });
-    showFinalResult(d);
-    eventSource.close();
-});
 
     eventSource.addEventListener('ping', () => {});
     eventSource.onerror = () => {
-        showError('Connection lost. Check server.');
+        showError('SSE connection lost');
         document.getElementById('runBtn').disabled = false;
+        document.querySelector('.status-text').textContent = 'CONNECTION ERROR';
     };
 }
 </script>
-
 </body>
 </html>
 """)

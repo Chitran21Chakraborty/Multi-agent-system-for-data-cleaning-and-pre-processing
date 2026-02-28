@@ -144,6 +144,9 @@ def encoding_node(state: AgentState) -> AgentState:
         })
         return state
 
+    # Capture original df BEFORE any changes
+    original_df = df.copy()
+
     # Get current categorical columns
     cat_cols = df.select_dtypes(include='object').columns.tolist()
 
@@ -156,7 +159,6 @@ def encoding_node(state: AgentState) -> AgentState:
         }
         state["current_agent"] = "encoding"
 
-        # EMIT DONE — skipped
         emit("agent_done", {
             "agent": "encoding",
             "skipped": True,
@@ -183,10 +185,12 @@ def encoding_node(state: AgentState) -> AgentState:
     strategies = get_encoding_strategy(cat_cols_info, state["learning_objective"])
     print(f"  Strategies decided: {strategies}")
 
+    # Record shape before encoding
+    shape_before = df.shape
+
     # Apply encoding
     df_encoded, actions_taken, new_columns = apply_encoding(df, strategies)
 
-    shape_before = df.shape
     shape_after = df_encoded.shape
 
     state["processed_dataframe"] = df_encoded
@@ -203,16 +207,26 @@ def encoding_node(state: AgentState) -> AgentState:
     print(f"  Encoding complete — shape before: {shape_before}, after: {shape_after}")
     print(f"  New columns created: {new_columns}")
 
+    # Capture BEFORE and AFTER distributions for charts
+    from agents.utils import capture_distributions
+    encoded_cols = list(actions_taken.keys())[:4]
+    dist_before = capture_distributions(original_df, encoded_cols)
+    dist_after  = capture_distributions(df_encoded, encoded_cols)
+
     # EMIT DONE
     emit("agent_done", {
         "agent": "encoding",
         "summary": {
-            "columns_encoded": len(strategies),
+            "columns_encoded":     len(strategies),
             "new_columns_created": len(new_columns),
             "shape_before": f"{shape_before[0]} × {shape_before[1]}",
-            "shape_after": f"{shape_after[0]} × {shape_after[1]}"
+            "shape_after":  f"{shape_after[0]} × {shape_after[1]}"
         },
-        "actions": actions_taken
+        "actions": actions_taken,
+        "distributions": {
+            "before": dist_before,
+            "after":  dist_after
+        }
     })
 
     return state
