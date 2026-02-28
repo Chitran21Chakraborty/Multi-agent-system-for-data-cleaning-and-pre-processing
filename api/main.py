@@ -12,14 +12,23 @@ from api.ui import router as ui_router
 from api.stream import router as stream_router, push_event_sync
 from reports.quality_score import compute_quality_score
 from reports.notebook_generator import generate_notebook
+from core.llm import get_llm
 
-from langchain_core.messages import SystemMessage, AIMessage
+from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 import json
 
+
+# ── PYDANTIC MODELS ───────────────────────────────────────────────────────────
 class ChatRequest(BaseModel):
     message: str
     history: list[dict] = []
 
+class URLRequest(BaseModel):
+    url: str
+    learning_objective: str
+
+
+# ── APP INIT ──────────────────────────────────────────────────────────────────
 app = FastAPI(
     title="Multi-Agent Data Preprocessing System",
     description="Autonomous LLM-powered data preprocessing pipeline",
@@ -39,6 +48,7 @@ app.add_middleware(
 jobs = {}
 
 
+# ── STATE INIT ────────────────────────────────────────────────────────────────
 def get_initial_state(dataset_path: str, learning_objective: str) -> dict:
     return {
         "dataset_path": dataset_path,
@@ -62,6 +72,7 @@ def get_initial_state(dataset_path: str, learning_objective: str) -> dict:
     }
 
 
+# ── ROUTES ────────────────────────────────────────────────────────────────────
 @app.get("/")
 def root():
     return {
@@ -75,7 +86,9 @@ def root():
             "GET /results/{job_id}": "Get results for a job",
             "GET /download/{job_id}/dataset": "Download preprocessed dataset",
             "GET /download/{job_id}/report": "Download preprocessing report",
-            "GET /download/{job_id}/script": "Download preprocessing script"
+            "GET /download/{job_id}/script": "Download preprocessing script",
+            "GET /download/{job_id}/notebook": "Download Jupyter notebook",
+            "POST /chat/{job_id}": "Chat about your dataset"
         }
     }
 
@@ -111,11 +124,6 @@ async def preprocess_file(
     return {"job_id": job_id, "status": "started"}
 
 
-class URLRequest(BaseModel):
-    url: str
-    learning_objective: str
-
-
 @app.post("/preprocess/url")
 async def preprocess_url(request: URLRequest):
     job_id = str(uuid.uuid4())[:8]
@@ -143,6 +151,7 @@ def get_results(job_id: str):
     return jobs[job_id]
 
 
+# ── DOWNLOAD ROUTES ───────────────────────────────────────────────────────────
 @app.get("/download/{job_id}/dataset")
 def download_dataset(job_id: str):
     path = f"outputs/{job_id}/preprocessed_dataset.csv"
@@ -168,6 +177,8 @@ def download_script(job_id: str):
         raise HTTPException(status_code=404, detail="Script not found")
     return FileResponse(path, media_type="text/plain",
                         filename="preprocessing_script.py")
+
+
 @app.get("/download/{job_id}/notebook")
 def download_notebook(job_id: str):
     path = f"outputs/{job_id}/preprocessing_notebook.ipynb"
@@ -177,6 +188,85 @@ def download_notebook(job_id: str):
                         filename="preprocessing_notebook.ipynb")
 
 
+# ── CHAT ROUTE ────────────────────────────────────────────────────────────────
+@app.post("/chat/{job_id}")
+async def chat_with_data(job_id: str, request: ChatRequest):
+    if job_id not in jobs:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    result = jobs[job_id]
+
+    profiling      = result.get("profiling_report", {}) or {}
+    imputation     = result.get("imputation_report", {}) or {}
+    outlier        = result.get("outlier_report", {}) or {}
+    encoding       = result.get("encoding_report", {}) or {}
+    transformation = result.get("transformation_report", {}) or {}
+    quality        = result.get("quality_score", {}) or {}
+    summary        = result.get("summary", {}) or {}
+    orig_shape     = summary.get("original_shape", {})
+    final_shape    = summary.get("final_shape", {})
+    columns        = summary.get("final_columns", [])
+
+    def fmt(d):
+        return json.dumps(d, indent=2, default=str)[:800] if d else "N/A"
+
+    system_prompt = f"""You are an expert data science assistant helping an ML engineer understand their dataset and preprocessing pipeline.
+
+DATASET CONTEXT:
+- Original shape: {orig_shape.get('rows','?')} rows x {orig_shape.get('columns','?')} columns
+- Final shape: {final_shape.get('rows','?')} rows x {final_shape.get('columns','?')} columns
+- Learning objective: {result.get('learning_objective', 'N/A')}
+- Final columns: {', '.join(columns[:20]) if columns else 'N/A'}
+
+DATA QUALITY SCORE:
+- Before: {quality.get('total_before','?')} ({quality.get('grade_before',{}).get('label','')})
+- After:  {quality.get('total_after','?')} ({quality.get('grade_after',{}).get('label','')})
+- Improvement: +{quality.get('improvement','?')}
+
+PROFILING SUMMARY:
+- Numerical columns: {len(profiling.get('numerical_columns', {}))}
+- Categorical columns: {len(profiling.get('categorical_columns', {}))}
+- Missing values found: {len(profiling.get('missing_values', {}))}
+- Duplicate rows: {profiling.get('duplicate_rows', 0)}
+- Insights: {profiling.get('insights', 'N/A')[:400]}
+
+IMPUTATION ACTIONS:
+{fmt(imputation.get('actions_taken'))}
+
+OUTLIER ACTIONS:
+{fmt(outlier.get('actions_taken'))}
+
+ENCODING ACTIONS:
+{fmt(encoding.get('actions_taken'))}
+
+TRANSFORMATION ACTIONS:
+{fmt(transformation.get('actions_taken'))}
+
+INSTRUCTIONS:
+- Answer questions specifically about THIS dataset and pipeline
+- Be concise but technical — the user is an ML engineer
+- If asked about a specific column, use the context above
+- If asked for recommendations, give concrete actionable advice
+- Use markdown for code snippets
+- Keep answers under 200 words unless more detail is needed
+"""
+
+    llm = get_llm()
+    messages = [SystemMessage(content=system_prompt)]
+
+    for msg in request.history[-6:]:
+        if msg["role"] == "user":
+            messages.append(HumanMessage(content=msg["content"]))
+        elif msg["role"] == "assistant":
+            messages.append(AIMessage(content=msg["content"]))
+
+    messages.append(HumanMessage(content=request.message))
+
+    response = llm.invoke(messages)
+    return {"reply": response.content}
+
+
+# ── PIPELINE ──────────────────────────────────────────────────────────────────
 def run_pipeline(dataset_path: str, learning_objective: str, job_id: str) -> dict:
     import agents.orchestrator as orch
     import agents.profiling_agent as pa
@@ -214,23 +304,34 @@ def run_pipeline(dataset_path: str, learning_objective: str, job_id: str) -> dic
 
     # Compute quality score
     result["quality_score"] = compute_quality_score(result)
+
+    # Generate notebook
     notebook_json = generate_notebook(result, job_id, dataset_path, learning_objective)
     with open(f"outputs/{job_id}/preprocessing_notebook.ipynb", "w",
-          encoding="utf-8") as f:
+              encoding="utf-8") as f:
         f.write(notebook_json)
 
     return result
 
 
+# ── RESPONSE BUILDER ──────────────────────────────────────────────────────────
 def build_response(result: dict, job_id: str) -> dict:
-    df_final = result.get("processed_dataframe")
+    df_final  = result.get("processed_dataframe")
     profiling = result.get("profiling_report", {})
 
     return {
         "job_id": job_id,
         "status": "completed",
         "errors": result.get("errors", []),
-        "quality_score": result.get("quality_score", {}),   # ← KEY LINE
+        "quality_score": result.get("quality_score", {}),
+        "learning_objective": result.get("learning_objective", ""),
+        "profiling_report":      result.get("profiling_report"),
+        "imputation_report":     result.get("imputation_report"),
+        "outlier_report":        result.get("outlier_report"),
+        "encoding_report":       result.get("encoding_report"),
+        "transformation_report": result.get("transformation_report"),
+        "dimensionality_report": result.get("dimensionality_report"),
+        "sampling_report":       result.get("sampling_report"),
         "summary": {
             "original_shape": profiling.get("shape", {}),
             "final_shape": {
@@ -240,18 +341,10 @@ def build_response(result: dict, job_id: str) -> dict:
             "agents_run": result.get("agents_to_run", []),
             "final_columns": df_final.columns.tolist() if df_final is not None else []
         },
-        "reports": {
-            "profiling":      result.get("profiling_report"),
-            "imputation":     result.get("imputation_report"),
-            "outlier":        result.get("outlier_report"),
-            "encoding":       result.get("encoding_report"),
-            "transformation": result.get("transformation_report"),
-            "dimensionality": result.get("dimensionality_report"),
-            "sampling":       result.get("sampling_report")
-        },
         "downloads": {
-            "dataset": f"/download/{job_id}/dataset",
-            "report":  f"/download/{job_id}/report",
-            "script":  f"/download/{job_id}/script"
+            "dataset":  f"/download/{job_id}/dataset",
+            "report":   f"/download/{job_id}/report",
+            "script":   f"/download/{job_id}/script",
+            "notebook": f"/download/{job_id}/notebook"
         }
     }
