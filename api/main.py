@@ -13,6 +13,13 @@ from api.stream import router as stream_router, push_event_sync
 from reports.quality_score import compute_quality_score
 from reports.notebook_generator import generate_notebook
 
+from langchain_core.messages import SystemMessage, AIMessage
+import json
+
+class ChatRequest(BaseModel):
+    message: str
+    history: list[dict] = []
+
 app = FastAPI(
     title="Multi-Agent Data Preprocessing System",
     description="Autonomous LLM-powered data preprocessing pipeline",
