@@ -5,3 +5,22 @@ __pycache__/
 outputs/
 *.csv
 *.ipynb
+
+
+# Environment
+.env
+
+# Uploaded datasets
+uploads/
+
+# Generated outputs
+outputs/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# VS Code
+.vscode/
