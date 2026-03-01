@@ -13,7 +13,6 @@ from api.stream import router as stream_router, push_event_sync
 from reports.quality_score import compute_quality_score
 from reports.notebook_generator import generate_notebook
 from core.llm import get_llm
-from reports.benchmark import run_benchmark
 
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 import json
@@ -266,55 +265,6 @@ INSTRUCTIONS:
     response = llm.invoke(messages)
     return {"reply": response.content}
 
-
-
-# ── BENCHMARK ROUTE ───────────────────────────────────────────────────────────
-@app.post("/benchmark/{job_id}")
-async def benchmark_job(job_id: str):
-    """Run before/after ML benchmark for a completed preprocessing job."""
-    if job_id not in jobs:
-        raise HTTPException(status_code=404, detail="Job not found")
-
-    result = jobs[job_id]
-
-    # Find original uploaded file
-    original_path = None
-    if os.path.exists("uploads"):
-        for f in os.listdir("uploads"):
-            if f.startswith(job_id):
-                original_path = os.path.join("uploads", f)
-                break
-
-    if not original_path or not os.path.exists(original_path):
-        raise HTTPException(status_code=404, detail="Original dataset not found")
-
-    preprocessed_path = f"outputs/{job_id}/preprocessed_dataset.csv"
-    if not os.path.exists(preprocessed_path):
-        raise HTTPException(status_code=404, detail="Preprocessed dataset not found")
-
-    learning_objective = result.get("learning_objective", "classification")
-    profiling_report   = result.get("profiling_report", {})
-
-    def run_in_background():
-        try:
-            bench = run_benchmark(
-                original_path      = original_path,
-                preprocessed_path  = preprocessed_path,
-                learning_objective = learning_objective,
-                profiling_report   = profiling_report
-            )
-            jobs[job_id]["benchmark"] = bench
-            push_event_sync(job_id, "benchmark_done", bench)
-        except Exception as e:
-            push_event_sync(job_id, "benchmark_done", {
-                "success": False,
-                "error": str(e)
-            })
-
-    thread = threading.Thread(target=run_in_background)
-    thread.start()
-
-    return {"status": "running", "job_id": job_id}
 
 
 # ── PIPELINE ──────────────────────────────────────────────────────────────────

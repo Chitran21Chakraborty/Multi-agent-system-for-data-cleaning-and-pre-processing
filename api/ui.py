@@ -288,40 +288,6 @@ header h1 { font-family: 'JetBrains Mono', monospace; font-size: 0.95rem; color:
 .col-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 10px; max-height: 80px; overflow-y: auto; }
 .col-tag { padding: 2px 8px; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; font-size: 0.62rem; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
 
-/* ── BENCHMARK CARD ──────────────────────────────────────── */
-.benchmark-card { background: var(--bg2); border: 1px solid rgba(179,136,255,0.25); border-radius: 14px; padding: 20px; animation: slideUp 0.35s ease; position: relative; overflow: hidden; }
-.benchmark-card::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 100% 0%, rgba(179,136,255,0.04), transparent 60%); pointer-events: none; }
-
-.bench-scores { display: flex; gap: 12px; margin-bottom: 16px; align-items: center; }
-.bench-box { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px; text-align: center; }
-.bench-box.bench-after { border-width: 2px; }
-.bench-label  { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); font-family: 'JetBrains Mono', monospace; margin-bottom: 8px; }
-.bench-number { font-size: 2.4rem; font-weight: 800; font-family: 'JetBrains Mono', monospace; line-height: 1; }
-.bench-metric { font-size: 0.68rem; color: var(--muted); margin-top: 4px; font-family: 'JetBrains Mono', monospace; }
-.bench-std    { font-size: 0.6rem; color: var(--muted); margin-top: 2px; font-family: 'JetBrains Mono', monospace; }
-.bench-arrow  { font-size: 1.4rem; color: var(--muted); flex-shrink: 0; }
-
-.bench-improvement { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 12px; border-radius: 10px; margin-bottom: 14px; font-family: 'JetBrains Mono', monospace; }
-.bench-improvement.improved { background: rgba(0,214,143,0.06); border: 1px solid rgba(0,214,143,0.2); }
-.bench-improvement.declined { background: rgba(255,82,82,0.06);  border: 1px solid rgba(255,82,82,0.2); }
-.bench-improvement-icon   { font-size: 1.4rem; }
-.bench-improvement-text   { font-size: 0.82rem; font-weight: 700; }
-.bench-improvement-detail { font-size: 0.68rem; color: var(--muted); margin-top: 2px; }
-
-.bench-meta { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 7px; margin-top: 12px; }
-.bench-meta-item { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
-.bench-meta-key { font-size: 0.58rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; font-family: 'JetBrains Mono', monospace; margin-bottom: 3px; }
-.bench-meta-val { font-size: 0.78rem; color: #e8edf8; font-weight: 600; font-family: 'JetBrains Mono', monospace; }
-
-.bench-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; margin-top: 12px; padding: 11px; background: linear-gradient(135deg, rgba(179,136,255,0.15), rgba(179,136,255,0.08)); border: 1px solid rgba(179,136,255,0.35); border-radius: 8px; color: #b388ff; font-size: 0.82rem; font-weight: 700; cursor: pointer; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.3px; transition: all 0.2s; }
-.bench-btn:hover { background: linear-gradient(135deg, rgba(179,136,255,0.25), rgba(179,136,255,0.12)); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(179,136,255,0.2); }
-.bench-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
-
-.bench-loading { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 24px; color: var(--muted); font-size: 0.78rem; font-family: 'JetBrains Mono', monospace; }
-.bench-spinner { width: 28px; height: 28px; border: 2px solid var(--border2); border-top-color: #b388ff; border-radius: 50%; animation: spin 0.8s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-.bench-error { background: rgba(255,82,82,0.08); border: 1px solid rgba(255,82,82,0.25); border-radius: 8px; padding: 12px 14px; color: #ff5252; font-size: 0.74rem; font-family: 'JetBrains Mono', monospace; margin-top: 10px; }
-
 /* ── EMPTY STATE ─────────────────────────────────────────── */
 .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 55vh; gap: 16px; text-align: center; }
 .empty-icon-wrap { width: 64px; height: 64px; background: linear-gradient(135deg, rgba(77,159,255,0.1), rgba(179,136,255,0.1)); border: 1px solid rgba(77,159,255,0.15); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; }
@@ -1033,18 +999,9 @@ function showFinalResult(data) {
             <a href="/download/${data.job_id}/notebook" class="dl-btn" style="border-color:rgba(179,136,255,0.3);color:#b388ff;">
                 <span class="dl-icon">📓</span>Notebook
             </a>
-        </div>
-        <button class="bench-btn" id="benchBtn" onclick="runBenchmark('${data.job_id}')">
-            📈 &nbsp;Run Model Benchmark
-        </button>`;
+        </div>`;
     container.appendChild(resultCard);
 
-    // Benchmark card placeholder
-    const benchCard = document.createElement('div');
-    benchCard.id = 'benchmarkCard';
-    benchCard.style.display = 'none';
-    benchCard.className = 'benchmark-card';
-    container.appendChild(benchCard);
 
     setTimeout(() => resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
     document.getElementById('runBtn').disabled = false;
@@ -1075,9 +1032,11 @@ async function startPipeline() {
 
     let jobId;
     try {
-        const res = await fetch('/preprocess/file', { method: 'POST', body: formData });
-        if (!res.ok) { const e = await res.json(); throw new Error(e.detail || 'Failed to start'); }
-        jobId = (await res.json()).job_id;
+        const res  = await fetch('/preprocess/file', { method: 'POST', body: formData });
+        const body = await res.json();                          // read body ONCE
+        if (!res.ok) throw new Error(body.detail || 'Failed to start');
+        jobId = body.job_id;
+        if (!jobId) throw new Error('Server did not return a job_id');
     } catch (err) {
         showError(err.message);
         document.getElementById('runBtn').disabled = false;
@@ -1086,15 +1045,25 @@ async function startPipeline() {
     }
 
     if (eventSource) eventSource.close();
+
+    console.log('[SSE] jobId:', jobId);
+    console.log('[SSE] connecting to:', `/stream/${jobId}`);
+
     eventSource = new EventSource(`/stream/${jobId}`);
 
+    eventSource.onopen = () => {
+        console.log('[SSE] connection opened successfully');
+    };
+
     eventSource.addEventListener('agent_start', e => {
+        console.log('[SSE] agent_start:', e.data);
         const d = JSON.parse(e.data);
         setFlowRunning(d.agent);
         addRunningCard(d.agent);
     });
 
     eventSource.addEventListener('agent_done', e => {
+        console.log('[SSE] agent_done:', e.data);
         const d = JSON.parse(e.data);
         setFlowDone(d.agent, d.skipped);
         completeCard(d.agent, d);
@@ -1115,158 +1084,23 @@ async function startPipeline() {
         eventSource.close();
     });
 
-    eventSource.addEventListener('benchmark_done', e => {
-        const d = JSON.parse(e.data);
-        showBenchmarkResult(d);
-    });
-
     eventSource.addEventListener('ping', () => {});
-    eventSource.onerror = () => {
-        showError('SSE connection lost');
-        document.getElementById('runBtn').disabled = false;
-        document.querySelector('.status-text').textContent = 'CONNECTION ERROR';
+    eventSource.onerror = (e) => {
+        console.error('[SSE] onerror fired:', e);
+        console.error('[SSE] readyState:', eventSource.readyState);
+        // readyState: 0=CONNECTING, 1=OPEN, 2=CLOSED
+        // Only show error if permanently closed (readyState=2)
+        // readyState=0 means browser is auto-reconnecting — don't show error yet
+        if (eventSource.readyState === EventSource.CLOSED) {
+            showError('SSE connection lost');
+            document.getElementById('runBtn').disabled = false;
+            document.querySelector('.status-text').textContent = 'CONNECTION ERROR';
+        } else {
+            console.warn('[SSE] transient error, browser will auto-reconnect...');
+        }
     };
 }
 
-
-// ── BENCHMARK ─────────────────────────────────────────────────────────────────
-async function runBenchmark(jobId) {
-    const btn  = document.getElementById('benchBtn');
-    const card = document.getElementById('benchmarkCard');
-
-    btn.disabled  = true;
-    btn.innerHTML = '⏳ &nbsp;Running Benchmark...';
-    card.style.display = 'block';
-    card.innerHTML = `
-        <div class="card-header" style="margin-bottom:16px;">
-            <div class="card-icon-wrap icon-purple">📈</div>
-            <span class="card-title">Model Performance Benchmark</span>
-            <span class="card-badge" style="background:rgba(179,136,255,0.1);color:#b388ff;border:1px solid rgba(179,136,255,0.25);">RUNNING</span>
-        </div>
-        <div class="bench-loading">
-            <div class="bench-spinner"></div>
-            <span>Training XGBoost on original + preprocessed data...</span>
-            <span style="font-size:0.65rem;color:var(--muted)">5-fold cross-validation · may take 30–60 seconds</span>
-        </div>`;
-    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-
-    try {
-        const res = await fetch(`/benchmark/${jobId}`, { method: 'POST' });
-        if (!res.ok) {
-            const e = await res.json();
-            throw new Error(e.detail || 'Benchmark failed to start');
-        }
-        // Result arrives via SSE event 'benchmark_done'
-    } catch (err) {
-        showBenchmarkError(err.message);
-        btn.disabled  = false;
-        btn.innerHTML = '📈 &nbsp;Run Model Benchmark';
-    }
-}
-
-function showBenchmarkError(msg) {
-    const card = document.getElementById('benchmarkCard');
-    if (!card) return;
-    card.innerHTML = `
-        <div class="card-header" style="margin-bottom:10px;">
-            <div class="card-icon-wrap icon-purple">📈</div>
-            <span class="card-title">Model Performance Benchmark</span>
-            <span class="card-badge badge-skipped">ERROR</span>
-        </div>
-        <div class="bench-error">⚠️ ${msg}</div>`;
-}
-
-function showBenchmarkResult(data) {
-    const card = document.getElementById('benchmarkCard');
-    const btn  = document.getElementById('benchBtn');
-    if (!card) return;
-
-    if (!data.success) {
-        showBenchmarkError(data.error || 'Benchmark failed');
-        if (btn) { btn.disabled = false; btn.innerHTML = '📈 &nbsp;Run Model Benchmark'; }
-        return;
-    }
-
-    const before   = data.before;
-    const after    = data.after;
-    const improved = data.improved;
-    const isRmse   = data.is_rmse;
-
-    const afterColor = improved ? '#00d68f' : '#ff5252';
-    const impColor   = improved ? 'var(--green)' : 'var(--red)';
-    const impIcon    = improved ? '🚀' : '⚠️';
-
-    function fmt(score) {
-        if (score === null || score === undefined) return '—';
-        return isRmse ? score.toFixed(4) : (score * 100).toFixed(1) + '%';
-    }
-
-    const impVal  = isRmse
-        ? `${data.improvement > 0 ? '-' : '+'}${Math.abs(data.improvement).toFixed(4)} RMSE`
-        : `${data.improvement > 0 ? '+' : ''}${(data.improvement * 100).toFixed(1)}% ${before.primary_name}`;
-
-    const impText = improved
-        ? `Preprocessing improved model performance by ${Math.abs(data.pct_change)}%`
-        : `Performance changed by ${data.pct_change}% — review pipeline settings`;
-
-    card.innerHTML = `
-        <div class="card-header" style="margin-bottom:16px;">
-            <div class="card-icon-wrap icon-purple">📈</div>
-            <span class="card-title">Model Performance Benchmark</span>
-            <span class="card-badge badge-complete">COMPLETE</span>
-        </div>
-        <div class="bench-scores">
-            <div class="bench-box">
-                <div class="bench-label">Before Preprocessing</div>
-                <div class="bench-number" style="color:#4a5570">${fmt(before.primary_score)}</div>
-                <div class="bench-metric">${before.primary_name}</div>
-                <div class="bench-std">±${before.primary_std ?? '—'} std · ${before.n_features} features</div>
-            </div>
-            <div class="bench-arrow">→</div>
-            <div class="bench-box bench-after" style="border-color:${afterColor}">
-                <div class="bench-label">After Preprocessing</div>
-                <div class="bench-number" style="color:${afterColor}">${fmt(after.primary_score)}</div>
-                <div class="bench-metric">${after.primary_name}</div>
-                <div class="bench-std">±${after.primary_std ?? '—'} std · ${after.n_features} features</div>
-            </div>
-        </div>
-        <div class="bench-improvement ${improved ? 'improved' : 'declined'}">
-            <span class="bench-improvement-icon">${impIcon}</span>
-            <div>
-                <div class="bench-improvement-text" style="color:${impColor}">${impVal}</div>
-                <div class="bench-improvement-detail">${impText}</div>
-            </div>
-        </div>
-        <div class="bench-meta">
-            <div class="bench-meta-item">
-                <div class="bench-meta-key">Model</div>
-                <div class="bench-meta-val">${data.model_used}</div>
-            </div>
-            <div class="bench-meta-item">
-                <div class="bench-meta-key">CV Strategy</div>
-                <div class="bench-meta-val">${data.cv_folds}-Fold</div>
-            </div>
-            <div class="bench-meta-item">
-                <div class="bench-meta-key">Target Column</div>
-                <div class="bench-meta-val">${data.target_column}</div>
-            </div>
-            <div class="bench-meta-item">
-                <div class="bench-meta-key">Features Before</div>
-                <div class="bench-meta-val">${before.n_features}</div>
-            </div>
-            <div class="bench-meta-item">
-                <div class="bench-meta-key">Features After</div>
-                <div class="bench-meta-val">${after.n_features}</div>
-            </div>
-            <div class="bench-meta-item">
-                <div class="bench-meta-key">${after.secondary_name}</div>
-                <div class="bench-meta-val">${isRmse ? after.secondary_score?.toFixed(3) : (after.secondary_score * 100)?.toFixed(1) + '%'}</div>
-            </div>
-        </div>`;
-
-    if (btn) { btn.disabled = false; btn.innerHTML = '🔄 &nbsp;Re-run Benchmark'; }
-    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-}
 
 // ── CHAT ──────────────────────────────────────────────────────────────────────
 let chatJobId   = null;

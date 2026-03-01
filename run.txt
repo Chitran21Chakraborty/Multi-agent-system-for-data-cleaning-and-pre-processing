@@ -1,1 +1,7 @@
 uvicorn api.main:app --reload --reload-dir api --reload-dir agents --reload-dir core --reload-dir reports --host 0.0.0.0 --port 8000
+
+
+uvicorn api.main:app --reload --reload-dir api --reload-dir agents --reload-dir core --host 0.0.0.0 --port 8000
+
+
+uvicorn api.main:app --reload --reload-dir api --reload-dir agents --reload-dir core --host 0.0.0.0 --port 8000
