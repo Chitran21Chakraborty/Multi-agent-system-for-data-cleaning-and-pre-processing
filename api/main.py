@@ -315,7 +315,7 @@ def run_pipeline(dataset_path: str, learning_objective: str, job_id: str) -> dic
     return result
 
 
-# ── RESPONSE BUILDER ──────────────────────────────────────────────────────────
+# ── RESPONSE BUILDERS ──────────────────────────────────────────────────────────
 def build_response(result: dict, job_id: str) -> dict:
     df_final  = result.get("processed_dataframe")
     profiling = result.get("profiling_report", {})

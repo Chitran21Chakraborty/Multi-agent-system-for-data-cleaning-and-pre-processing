@@ -409,7 +409,6 @@ header h1 { font-family: 'JetBrains Mono', monospace; font-size: 0.95rem; color:
     <div class="badges">
         <span class="badge badge-blue">LLaMA 3.3 · 70B</span>
         <span class="badge badge-green">LangGraph</span>
-        <span class="badge badge-purple">Groq API</span>
     </div>
     <div class="header-right">
         <div class="status-dot"></div>
