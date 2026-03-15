@@ -16,6 +16,9 @@ from core.llm import get_llm
 
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 import json
+import time
+
+start_time = time.time()
 
 
 # ── PYDANTIC MODELS ───────────────────────────────────────────────────────────
@@ -349,3 +352,7 @@ def build_response(result: dict, job_id: str) -> dict:
             "notebook": f"/download/{job_id}/notebook"
         }
     }
+
+end_time = time.time()
+processing_time = round(end_time - start_time, 2)
+print(f"[PIPELINE] Total processing time: {processing_time}s")
