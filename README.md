@@ -1,10 +1,10 @@
-# 🤖 Multi-Agent Data Preprocessing System
+#  Multi-Agent Data Preprocessing System
 
 An autonomous LLM-powered data preprocessing pipeline that analyzes CSV datasets and applies intelligent preprocessing decisions using a multi-agent architecture orchestrated by LangGraph.
 
 ---
 
-## 📋 Overview
+##  Overview
 
 This system uses multiple specialized AI agents, each responsible for a specific preprocessing task. A central **Orchestrator Agent** analyzes the dataset and decides which agents to run. Each agent consults a **LLaMA 3.3 70B** language model (via Groq) to make context-aware decisions rather than applying fixed rules.
 
@@ -12,7 +12,7 @@ The system features a **real-time streaming web UI** where users can watch each 
 
 ---
 
-## 🏗️ Architecture
+##  Architecture
 
 ```
 CSV Dataset
@@ -24,16 +24,16 @@ CSV Dataset
 ┌────────────────────────────────────────────────┐
 │                LangGraph Pipeline              │
 │                                                │
-│  🔍 Profiling → 🩹 Imputation → 📊 Outlier    │
-│  → 🔤 Encoding → ⚖️ Transformation            │
-│  → 📐 Dimensionality → 🔁 Sampling            │
+│   Profiling →  Imputation →  Outlier    │
+│  →  Encoding →  Transformation            │
+│  →  Dimensionality → Sampling            │
 └────────────────────────────────────────────────┘
          ↓
 ┌─────────────────┐
 │ Report Generator│  ← Executive summary + reproducible script
 └─────────────────┘
          ↓
-  📊 Clean Dataset  📄 Report  🐍 Python Script
+   Clean Dataset   Report   Python Script
 ```
 
 ### Agent Descriptions
@@ -51,7 +51,7 @@ CSV Dataset
 
 ---
 
-## 🗂️ Project Structure
+##  Project Structure
 
 ```
 data_prep_agent/
@@ -82,7 +82,7 @@ data_prep_agent/
 
 ---
 
-## ⚙️ Setup & Installation
+##  Setup & Installation
 
 ### Prerequisites
 
@@ -138,7 +138,7 @@ http://localhost:8000/ui
 
 ---
 
-## 🚀 Usage
+##  Usage
 
 1. Open `http://localhost:8000/ui`
 2. Upload a CSV file or provide a CSV URL
@@ -149,7 +149,7 @@ http://localhost:8000/ui
 
 ---
 
-## 📡 API Endpoints
+##  API Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -166,7 +166,7 @@ Interactive API docs available at `http://localhost:8000/docs`
 
 ---
 
-## 📦 Requirements
+##  Requirements
 
 ```
 fastapi
@@ -191,7 +191,7 @@ pip install -r requirements.txt
 
 ---
 
-## 🔄 Output Files
+##  Output Files
 
 After each run, three files are saved to `outputs/{job_id}/`:
 
@@ -200,8 +200,7 @@ After each run, three files are saved to `outputs/{job_id}/`:
 - **`preprocessing_script.py`** — Standalone reproducible Python script with all transformations applied
 
 ---
-
-## 🖥️ Edge Deployment (Jetson AGX Thor)
+##  Edge Deployment (Jetson AGX Thor)
 
 This system is designed to run on edge hardware. To switch from Groq cloud API to a local LLM on Jetson Thor, change only one file:
 
@@ -231,7 +230,7 @@ uvicorn api.main:app --host 0.0.0.0 --port 8000
 
 ---
 
-## 🧠 Tech Stack
+##  Tech Stack
 
 | Component | Technology |
 |-----------|-----------|
@@ -244,7 +243,7 @@ uvicorn api.main:app --host 0.0.0.0 --port 8000
 
 ---
 
-## 📊 Example Results
+##  Example Results
 
 **Titanic Dataset (891 rows, 12 columns)**
 - Agents run: profiling, imputation, encoding, transformation, outlier
@@ -260,12 +259,12 @@ uvicorn api.main:app --host 0.0.0.0 --port 8000
 
 ---
 
-## 📝 License
+##  License
 
 MIT License — free to use for academic and commercial purposes.
 
 ---
 
-## 👤 Author
+##  Author
 
 Built as a semester project demonstrating autonomous multi-agent systems for data preprocessing with edge AI deployment capabilities.
