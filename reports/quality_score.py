@@ -83,7 +83,7 @@ def compute_quality_score(state: dict) -> dict:
     enc_done   = encoding.get("status") == "completed"
     trans_done = transformation.get("status") == "completed"
     feature_after = 25 if (enc_done or not cat_cols) and (trans_done or not num_cols) \
-                    else (20 if enc_done or trans_done else feature_before)
+                else (max(feature_before, 20) if enc_done or trans_done else feature_before)
 
     scores["feature_readiness"] = {
         "label": "Feature Readiness",
