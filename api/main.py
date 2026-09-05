@@ -321,12 +321,25 @@ def build_response(result: dict, job_id: str) -> dict:
     df_final  = result.get("processed_dataframe")
     profiling = result.get("profiling_report", {})
 
+    # Build dataset preview (first 8 rows)
+    dataset_preview = None
+    if df_final is not None:
+        try:
+            preview_df = df_final.head(8)
+            dataset_preview = {
+                "head": preview_df.fillna("").astype(str).to_dict(orient="records"),
+                "columns": df_final.columns.tolist()
+            }
+        except Exception:
+            dataset_preview = None
+
     return {
         "job_id": job_id,
         "status": "completed",
         "errors": result.get("errors", []),
         "quality_score": result.get("quality_score", {}),
         "learning_objective": result.get("learning_objective", ""),
+        "final_report": result.get("final_report", ""),
         "profiling_report":      result.get("profiling_report"),
         "imputation_report":     result.get("imputation_report"),
         "outlier_report":        result.get("outlier_report"),
@@ -334,6 +347,7 @@ def build_response(result: dict, job_id: str) -> dict:
         "transformation_report": result.get("transformation_report"),
         "dimensionality_report": result.get("dimensionality_report"),
         "sampling_report":       result.get("sampling_report"),
+        "dataset_preview": dataset_preview,
         "summary": {
             "original_shape": profiling.get("shape", {}),
             "final_shape": {
