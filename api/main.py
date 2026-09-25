@@ -4,7 +4,7 @@ import shutil
 import asyncio
 import threading
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from core.graph import build_graph
@@ -76,6 +76,11 @@ def get_initial_state(dataset_path: str, learning_objective: str) -> dict:
 # ── ROUTES ────────────────────────────────────────────────────────────────────
 @app.get("/")
 def root():
+    return RedirectResponse(url="/ui")
+
+
+@app.get("/api")
+def api_info():
     return {
         "message": "AutoClean",
         "version": "1.0.0",
