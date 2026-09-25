@@ -530,6 +530,14 @@ export default function App() {
         {/* ══ SETUP ══════════════════════════════════════════════════════════ */}
         {activeTab === 'setup' && (
           <section>
+            <div style={{ position: 'relative', minHeight: '210px', marginBottom: '32px', overflow: 'hidden', borderRadius: '24px', border: '1px solid var(--colors-hairline)', background: '#dbeafe' }}>
+              <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1600&q=85" alt="Analytics dashboard showing data insights" style={{ width: '100%', height: '210px', display: 'block', objectFit: 'cover' }} />
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(8, 25, 52, 0.78), rgba(8, 25, 52, 0.08))', pointerEvents: 'none' }} />
+              <div style={{ position: 'absolute', zIndex: 1, left: '32px', top: '50%', transform: 'translateY(-50%)', maxWidth: '360px', color: '#fff' }}>
+                <strong style={{ display: 'block', fontSize: '22px', lineHeight: '1.15', marginBottom: '8px' }}>Turn raw data into clear decisions.</strong>
+                <span style={{ display: 'block', fontSize: '13px', lineHeight: '1.5', color: 'rgba(255,255,255,0.82)' }}>AutoClean profiles, prepares, and explains every transformation in one transparent workflow.</span>
+              </div>
+            </div>
             {/* Hero */}
             <div style={{ textAlign: 'center', padding: '48px 0 40px' }}>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 14px', borderRadius: '9999px', background: 'var(--colors-canvas-soft)', border: '1px solid var(--colors-hairline)', marginBottom: '20px' }}>

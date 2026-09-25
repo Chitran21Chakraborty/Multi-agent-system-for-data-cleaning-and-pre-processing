@@ -166,6 +166,17 @@ body {
 }
 .dropzone:hover { border-color: var(--colors-ink); background: var(--colors-canvas); }
 
+.setup-visual {
+    position: relative; min-height: 210px; margin-bottom: 32px; overflow: hidden;
+    border-radius: var(--rounded-md); border: 1px solid var(--colors-hairline);
+    background: #dbeafe;
+}
+.setup-visual img { width: 100%; height: 210px; display: block; object-fit: cover; }
+.setup-visual::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(8, 25, 52, 0.78), rgba(8, 25, 52, 0.08)); pointer-events: none; }
+.setup-visual-copy { position: absolute; z-index: 1; left: 32px; top: 50%; transform: translateY(-50%); max-width: 360px; color: #fff; }
+.setup-visual-copy strong { display: block; font-size: 22px; line-height: 1.15; margin-bottom: 8px; }
+.setup-visual-copy span { display: block; font-size: 13px; line-height: 1.5; color: rgba(255,255,255,0.82); }
+
 .dropzone-icon {
     width: 56px; height: 56px; background: var(--colors-canvas); border-radius: 30%;
     display: flex; align-items: center; justify-content: center; color: var(--colors-ink);
@@ -325,6 +336,13 @@ footer.mobbin-footer {
 
     <!-- ── SECTION 1: SETUP & UPLOAD ── -->
     <section id="section-setup" class="card-mobbin">
+        <div class="setup-visual">
+            <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1600&q=85" alt="Analytics dashboard showing data insights">
+            <div class="setup-visual-copy">
+                <strong>Turn raw data into clear decisions.</strong>
+                <span>AutoClean profiles, prepares, and explains every transformation in one transparent workflow.</span>
+            </div>
+        </div>
         <div style="text-align:center;margin-bottom:32px;">
             <h1 style="font-size:38px;font-weight:700;letter-spacing:-1.2px;margin-bottom:10px;">Autonomous Data Cleaning & Preprocessing.</h1>
             <p style="font-size:17px;color:var(--colors-text-muted);font-weight:300;max-width:640px;margin:0 auto;">Upload your dataset. Our team of 8 specialized LangGraph agents will profile, impute, encode, transform, reduce dimensionality, and balance your data with full step-by-step transparency.</p>
