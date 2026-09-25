@@ -11,11 +11,12 @@ def get_ui():
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mobbin Data Prep — Autonomous Multi-Agent Preprocessing Engine</title>
+<title>AutoClean — Autonomous Data Preprocessing</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
 <style>
 /* ── MOBBIN DESIGN SYSTEM TOKENS ── */
@@ -277,6 +278,20 @@ table.mobbin-table td { padding: 14px 18px; border-bottom: 1px solid var(--color
 .chat-bubble.assistant { background: var(--colors-canvas-soft); color: var(--colors-ink); align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid var(--colors-hairline); }
 .chat-footer { padding: 12px; border-top: 1px solid var(--colors-hairline); display: flex; gap: 8px; }
 
+.report-markdown { color: var(--colors-ink-soft); font-family: var(--font-sans); line-height: 1.65; }
+.report-markdown h1 { font-size: 26px; line-height: 1.2; margin: 0 0 20px; color: var(--colors-ink); }
+.report-markdown h2 { font-size: 18px; line-height: 1.3; margin: 30px 0 12px; color: var(--colors-ink); border-bottom: 1px solid var(--colors-hairline); padding-bottom: 8px; }
+.report-markdown h3 { font-size: 15px; margin: 22px 0 8px; color: var(--colors-ink); }
+.report-markdown p, .report-markdown ul, .report-markdown ol, .report-markdown blockquote { margin: 10px 0; }
+.report-markdown ul, .report-markdown ol { padding-left: 22px; }
+.report-markdown blockquote { margin-left: 0; padding: 12px 16px; border-left: 3px solid var(--colors-accent); background: #eff6ff; color: var(--colors-text-muted); border-radius: 0 10px 10px 0; }
+.report-markdown table { width: 100%; border-collapse: collapse; margin: 14px 0 20px; font-size: 13px; }
+.report-markdown th { text-align: left; background: var(--colors-ink); color: #fff; font-weight: 700; }
+.report-markdown th, .report-markdown td { padding: 10px 12px; border: 1px solid var(--colors-hairline); vertical-align: top; }
+.report-markdown tr:nth-child(even) td { background: #fafafa; }
+.report-markdown code { background: #e8eef8; color: #164e8a; padding: 2px 5px; border-radius: 4px; font-size: 0.92em; }
+.report-markdown hr { border: 0; border-top: 1px solid var(--colors-hairline); margin: 24px 0; }
+
 /* ── FOOTER ── */
 footer.mobbin-footer {
     background: var(--colors-ink); color: var(--colors-canvas); margin-top: var(--spacing-section);
@@ -295,7 +310,7 @@ footer.mobbin-footer {
     <nav class="nav-pill">
         <a href="#" class="brand-logo">
             <div class="brand-squircle"><i data-lucide="sparkles" style="width:16px;height:16px;"></i></div>
-            Mobbin Data Prep
+            AutoClean
         </a>
         <div class="segmented-control">
             <button class="segmented-item active" id="tab-nav-setup" onclick="switchMainTab('setup')">1. Setup</button>
@@ -481,7 +496,7 @@ footer.mobbin-footer {
         <!-- FULL EXECUTIVE REPORT -->
         <section class="card-mobbin">
             <h3 style="font-size:18px;font-weight:700;margin-bottom:16px;">Executive Preprocessing Report</h3>
-            <div id="full-executive-report" style="font-size:14px;white-space:pre-wrap;font-family:var(--font-mono);line-height:1.5;background:var(--colors-canvas-soft);padding:20px;border-radius:var(--rounded-sm);">
+            <div id="full-executive-report" class="report-markdown" style="background:var(--colors-canvas-soft);padding:24px;border-radius:var(--rounded-sm);">
                 Report generated upon completion...
             </div>
         </section>
@@ -506,7 +521,7 @@ footer.mobbin-footer {
         <button onclick="toggleChat()" style="background:none;border:none;cursor:pointer;"><i data-lucide="x" style="width:16px;height:16px;"></i></button>
     </div>
     <div class="chat-body" id="chat-messages">
-        <div class="chat-bubble assistant">Hello! I am your Dataset Assistant. Ask me anything about feature transformations or decisions made by the 8 agents.</div>
+        <div class="chat-bubble assistant">Hello! I am your Dataset Assistant. Ask me anything about feature transformations or decisions made by AutoClean.</div>
     </div>
     <div class="chat-footer">
         <input type="text" id="chat-input" class="input-field" placeholder="Type a question..." onkeydown="if(event.key==='Enter') sendChatMessage()">
@@ -519,9 +534,9 @@ footer.mobbin-footer {
     <div class="container" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px;">
         <div style="display:flex;align-items:center;gap:12px;">
             <div class="brand-squircle" style="background:#ffffff;color:#141414;"><i data-lucide="sparkles" style="width:16px;height:16px;"></i></div>
-            <span style="font-weight:700;font-size:16px;">Mobbin Data Prep</span>
+            <span style="font-weight:700;font-size:16px;">AutoClean</span>
         </div>
-        <p style="font-size:13px;color:var(--colors-text-faint);">8-Agent LangGraph System.</p>
+        <p style="font-size:13px;color:var(--colors-text-faint);">Autonomous data preparation.</p>
     </div>
 </footer>
 
@@ -774,7 +789,9 @@ async function loadJobResults(jobId) {
             { id: 1, sample: "Dataset loaded", status: "Cleaned" }
         ]});
 
-        document.getElementById('full-executive-report').textContent = data.final_report || 'All 8 agents executed successfully.';
+        const reportElement = document.getElementById('full-executive-report');
+        const report = data.final_report || '# AutoClean Report\n\nNo report is available yet.';
+        reportElement.innerHTML = window.marked ? marked.parse(report) : report;
 
     } catch (err) {
         console.error('Failed to load results:', err);
@@ -825,9 +842,18 @@ function renderTablePreview(preview) {
 async function sendChatMessage() {
     const input = document.getElementById('chat-input');
     const text = input.value.trim();
-    if (!text || !currentJobId) return;
-
     const messages = document.getElementById('chat-messages');
+
+    if (!text) return;
+
+    if (!currentJobId) {
+        messages.innerHTML += `<div class="chat-bubble user">${text}</div>`;
+        messages.innerHTML += `<div class="chat-bubble assistant">Run a preprocessing pipeline first so the assistant has dataset context. Then ask about missing values, encoding, transformations, or quality scores.</div>`;
+        input.value = '';
+        messages.scrollTop = messages.scrollHeight;
+        return;
+    }
+
     messages.innerHTML += `<div class="chat-bubble user">${text}</div>`;
     input.value = '';
     messages.scrollTop = messages.scrollHeight;
@@ -836,13 +862,25 @@ async function sendChatMessage() {
         const res = await fetch(`/chat/${currentJobId}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: text })
+            body: JSON.stringify({ message: text, history: [] })
         });
-        const data = await res.json();
+
+        let data = {};
+        try {
+            data = await res.json();
+        } catch (err) {
+            data = { reply: 'Assistant response is unavailable right now.' };
+        }
+
+        if (!res.ok && !data.reply && !data.response) {
+            data.reply = data.detail || 'Assistant is unavailable right now.';
+        }
+
         messages.innerHTML += `<div class="chat-bubble assistant">${data.reply || data.response || 'Answer generated.'}</div>`;
         messages.scrollTop = messages.scrollHeight;
     } catch (e) {
         messages.innerHTML += `<div class="chat-bubble assistant">Error contacting assistant.</div>`;
+        messages.scrollTop = messages.scrollHeight;
     }
 }
 </script>

@@ -31,7 +31,7 @@ class URLRequest(BaseModel):
 
 # ── APP INIT ──────────────────────────────────────────────────────────────────
 app = FastAPI(
-    title="Multi-Agent Data Preprocessing System",
+    title="AutoClean API",
     description="Autonomous LLM-powered data preprocessing pipeline",
     version="1.0.0"
 )
@@ -77,7 +77,7 @@ def get_initial_state(dataset_path: str, learning_objective: str) -> dict:
 @app.get("/")
 def root():
     return {
-        "message": "Multi-Agent Data Preprocessing System",
+        "message": "AutoClean",
         "version": "1.0.0",
         "status": "running",
         "endpoints": {
@@ -92,6 +92,11 @@ def root():
             "POST /chat/{job_id}": "Chat about your dataset"
         }
     }
+
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok", "service": "autoclean"}
 
 
 @app.post("/preprocess/file")
@@ -189,11 +194,116 @@ def download_notebook(job_id: str):
                         filename="preprocessing_notebook.ipynb")
 
 
+def normalize_question(text: str) -> str:
+    return (text or "").strip().lower()
+
+
+def contains_any(text: str, terms: list[str]) -> bool:
+    q = normalize_question(text)
+    return any(term.lower() in q for term in terms)
+
+
+def build_agent_explanation(result: dict, agent_name: str) -> str:
+    agent_map = {
+        "imputation": ("imputation_report", ["imputation", "missing", "null", "fill"]),
+        "outlier": ("outlier_report", ["outlier", "extreme", "anomaly"]),
+        "encoding": ("encoding_report", ["encoding", "categorical", "one-hot", "label"]),
+        "transformation": ("transformation_report", ["transform", "scale", "scaling", "normalize"]),
+        "dimensionality": ("dimensionality_report", ["dimensionality", "pca", "feature reduction"]),
+        "sampling": ("sampling_report", ["sampling", "oversample", "undersample", "smote", "imbalance"]),
+    }
+    key, _ = agent_map.get(agent_name, (None, []))
+    report = result.get(key, {}) if key else {}
+    status = report.get("status")
+    reason = report.get("reason") or "No action was required by the pipeline logic."
+
+    if agent_name == "imputation":
+        profiling = result.get("profiling_report", {}) or {}
+        missing = profiling.get("missing_values", {}) or {}
+        if not missing:
+            return "The imputation agent was skipped because the profiling stage found no missing values in the dataset, so there was nothing to fill."
+        if status == "skipped":
+            return f"The imputation agent was skipped because the dataset profile did not require an imputation pass for this run: {reason}."
+        return f"The imputation agent did not need to change the dataset because the missing-value profile was already acceptable: {reason}."
+
+    if agent_name == "outlier":
+        if status == "skipped":
+            return f"The outlier agent was skipped because no significant outliers were detected in the numeric columns for this dataset: {reason}."
+        return f"The outlier agent did not need to modify the data because the distribution stayed within acceptable bounds: {reason}."
+
+    if status == "skipped":
+        return f"The {agent_name} agent was skipped because the dataset profile did not require that preprocessing step: {reason}."
+    return f"The {agent_name} agent did not perform a major change because the dataset already met the conditions for this step: {reason}."
+
+
+def build_skip_explanation(result: dict, question: str) -> str:
+    q = normalize_question(question)
+    if "imputation" in q or "missing" in q or "null" in q:
+        return build_agent_explanation(result, "imputation")
+    if "outlier" in q or "anomaly" in q or "extreme" in q:
+        return build_agent_explanation(result, "outlier")
+    if "encoding" in q or "categorical" in q:
+        return build_agent_explanation(result, "encoding")
+    if "transform" in q or "scale" in q or "scaling" in q:
+        return build_agent_explanation(result, "transformation")
+    if "feature" in q and ("reduce" in q or "dim" in q or "pca" in q):
+        return build_agent_explanation(result, "dimensionality")
+    if "sample" in q or "oversample" in q or "undersample" in q or "imbalance" in q:
+        return build_agent_explanation(result, "sampling")
+    return "The selected preprocessing agent was skipped because the dataset profile did not require that step for this run."
+
+
+def build_irrelevant_response(question: str) -> str:
+    q = normalize_question(question)
+    if not q:
+        return "I can explain the preprocessing pipeline and dataset behavior for this job. Ask about missing values, outliers, encoding, scaling, or why an agent was skipped."
+    if contains_any(q, ["weather", "football", "movie", "politics", "travel", "stock", "recipe", "joke", "math equation", "capital of", "who is", "history"]):
+        return "I can help only with this dataset and its preprocessing pipeline. Ask about missing values, outliers, encoding, scaling, agent decisions, or dataset quality."
+    return "I’m focused on this dataset’s preprocessing workflow. Ask me about the agents, missing values, outlier handling, encoding, transformations, or reporting results."
+
+
+def build_dataset_summary_response(result: dict, question: str) -> str | None:
+    q = normalize_question(question)
+    summary = result.get("summary", {}) or {}
+    profiling = result.get("profiling_report", {}) or {}
+    columns = summary.get("final_columns") or []
+    original_shape = summary.get("original_shape", {}) or {}
+    final_shape = summary.get("final_shape", {}) or {}
+    quality = result.get("quality_score", {}) or {}
+
+    if "column" in q or "feature" in q:
+        if columns:
+            return f"The processed dataset has {len(columns)} columns: {', '.join(columns[:12])}{'...' if len(columns) > 12 else ''}."
+        return "I could not find a column list in the current dataset report."
+
+    if "row" in q or "shape" in q or "size" in q:
+        return f"The dataset started at {original_shape.get('rows', '?')} rows × {original_shape.get('columns', '?')} columns and ended at {final_shape.get('rows', '?')} rows × {final_shape.get('columns', '?')} columns."
+
+    if "missing" in q or "null" in q:
+        missing = profiling.get("missing_values", {}) or {}
+        if not missing:
+            return "There are no missing values in the current dataset profile, so the imputation step was skipped."
+        return f"Missing values were found in {len(missing)} column(s): {', '.join(list(missing)[:5])}{'...' if len(missing) > 5 else ''}."
+
+    if "quality" in q or "score" in q:
+        after = quality.get("total_after")
+        if after is not None:
+            return f"The quality score after preprocessing is {after} out of 100, with grade {quality.get('grade_after', {}).get('label', 'N/A')}."
+        return "The dataset quality report is not available yet."
+
+    if "target" in q and "objective" in q:
+        return f"The learning objective is {result.get('learning_objective', 'not specified')}."
+
+    return None
+
+
 # ── CHAT ROUTE ────────────────────────────────────────────────────────────────
 @app.post("/chat/{job_id}")
 async def chat_with_data(job_id: str, request: ChatRequest):
     if job_id not in jobs:
-        raise HTTPException(status_code=404, detail="Job not found")
+        return {
+            "reply": "I don’t have a completed preprocessing job for this dataset yet. Run a pipeline first, then ask me about missing values, encoding choices, transformations, quality, or feature recommendations."
+        }
 
     result = jobs[job_id]
 
@@ -263,8 +373,28 @@ INSTRUCTIONS:
 
     messages.append(HumanMessage(content=request.message))
 
+    q = request.message.strip()
+    q_lower = normalize_question(q)
+
+    dataset_summary = build_dataset_summary_response(result, q)
+    if dataset_summary:
+        return {"reply": dataset_summary}
+
+    if contains_any(q_lower, ["why", "skipped", "not run", "not needed", "did not run"]) and any(agent in q_lower for agent in ["imputation", "outlier", "encoding", "transformation", "dimensionality", "sampling"]):
+        return {"reply": build_skip_explanation(result, q)}
+
+    if not any(keyword in q_lower for keyword in ["dataset", "column", "feature", "agent", "missing", "outlier", "encoding", "transform", "scale", "quality", "preprocess", "imputation", "sampling", "null", "target", "row", "shape", "distribution", "value", "rows", "columns", "features"]):
+        return {"reply": build_irrelevant_response(q)}
+
     response = llm.invoke(messages)
-    return {"reply": response.content}
+    reply = getattr(response, "content", str(response))
+    if isinstance(reply, str):
+        reply = reply.replace("[Rule Engine Fallback]", "").strip()
+
+    if not reply or len(reply) < 20 and "rule-based" in reply.lower():
+        reply = "I’m using the dataset profile to answer this question. Ask me about missing values, outlier handling, encoding choices, the preprocessing steps, or why an agent was skipped."
+
+    return {"reply": reply}
 
 
 

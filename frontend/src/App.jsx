@@ -953,7 +953,7 @@ export default function App() {
             <span style={{ fontWeight: '700', fontSize: '16px' }}>DataPrep AI</span>
           </div>
           <p style={{ fontSize: '13px', color: 'var(--colors-text-faint)' }}>
-            8-Agent LangGraph System · Powered by Groq LLMs
+            Autonomous data preparation · Powered by Groq
           </p>
         </div>
       </footer>

@@ -1,4 +1,4 @@
-#  Multi-Agent Data Preprocessing System
+# AutoClean
 
 An autonomous LLM-powered data preprocessing pipeline that analyzes CSV datasets and applies intelligent preprocessing decisions using a multi-agent architecture orchestrated by LangGraph.
 
@@ -121,7 +121,7 @@ Create a `.env` file in the project root:
 
 ```env
 GROQ_API_KEY=your_groq_api_key_here
-GROQ_MODEL=llama-3.3-70b-versatile
+GROQ_MODEL=openai/gpt-oss-120b
 ```
 
 ### 5. Start the server
@@ -135,6 +135,20 @@ uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
 ```
 http://localhost:8000/ui
 ```
+
+## Deploy on Render
+
+The recommended deployment is a single Render Web Service. It runs the FastAPI API, SSE stream, upload pipeline, downloads, and the built-in AutoClean UI together.
+
+1. Push this repository to GitHub.
+2. In Render, choose **New > Blueprint** and select the repository.
+3. Render will read `render.yaml` and create the `data-prep-agent-api` service.
+4. Add `GROQ_API_KEY` as a secret environment variable in the Render dashboard.
+5. Deploy and open the generated URL followed by `/ui`.
+
+The service exposes `/health` for Render health checks and uses Render's `$PORT` automatically. Do not deploy `.env`; it is ignored by Git. Generated uploads and reports are stored on the instance filesystem, which is ephemeral on Render. This is suitable for demos and short-lived jobs. For durable production history, connect object storage such as S3 or Cloudinary and replace the local `uploads/` and `outputs/` paths with that storage.
+
+The current deployment model is intentionally single-process because jobs, SSE events, and in-memory job state are local to one process. Keep the Render start command at one Uvicorn worker unless shared job storage is added.
 
 ---
 

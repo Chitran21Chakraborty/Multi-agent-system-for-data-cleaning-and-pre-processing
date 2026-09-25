@@ -13,15 +13,14 @@ class RetryLLM:
     automatically retries across candidate models and handles rate limits gracefully.
     """
 
-    def __init__(self, api_key: str = None, default_model: str = "llama-3.3-70b-versatile", max_retries: int = 3):
+    def __init__(self, api_key: str = None, default_model: str = "openai/gpt-oss-120b", max_retries: int = 3):
         self.api_key = api_key or os.getenv("GROQ_API_KEY")
         self.candidate_models = [
             os.getenv("GROQ_MODEL", default_model),
+            "openai/gpt-oss-120b",
             "llama-3.3-70b-versatile",
-            "llama-3.1-70b-versatile",
             "llama-3.1-8b-instant",
-            "gemma2-9b-it",
-            "llama3-70b-8192",
+            "qwen/qwen3-32b",
         ]
         # Remove duplicates while preserving order
         self.candidate_models = [m for m in dict.fromkeys(self.candidate_models) if m]
@@ -50,7 +49,7 @@ class RetryLLM:
 
     def invoke(self, messages, **kwargs):
         if not self.api_key or self.api_key.startswith("gsk_placeholder"):
-            return AIMessage(content="[Rule Engine Fallback] Automated heuristic decision completed successfully.")
+            return AIMessage(content="Based on the dataset profile and rule-based heuristics, this decision was made without a live LLM response.")
 
         last_exception = None
         for m_idx in range(self._active_model_idx, len(self.candidate_models)):
@@ -74,8 +73,8 @@ class RetryLLM:
                     else:
                         break
 
-        print(f"[LLM] API call failed: {last_exception}. Falling back to Rule Engine response.")
-        return AIMessage(content="[Rule Engine Fallback] Preprocessing action determined automatically based on dataset heuristics.")
+        print(f"[LLM] API call failed: {last_exception}. Falling back to rule-based response.")
+        return AIMessage(content="The dataset profile indicates this decision was made using rule-based heuristics because the live model response was unavailable.")
 
     def stream(self, messages, **kwargs):
         res = self.invoke(messages, **kwargs)
@@ -98,4 +97,4 @@ def get_llm() -> RetryLLM:
 
 
 def call_llm_with_retry(llm, messages, max_retries=3):
-    return llm.invoke(messages)
+    return llm.invoke(messages)
