@@ -92,17 +92,17 @@ async def stream_events(job_id: str):
     _get_store(job_id)
 
     async def event_generator():
-        cursor       = 0
-        ping_counter = 0
-        max_wait     = 300
-        waited       = 0.0
+        cursor       = 0 #Which events have already been sent to this browser connection?
+        ping_counter = 0 #This counts how many idle polling cycles have occurred.
+        max_wait     = 300 #Don't keep the stream alive indefinitely.
+        waited       = 0.0 #This tracks how long we've been waiting.
 
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(0.5) #to give the job/event-producing side a small amount of time to initialize and start generating events.
 
         while waited < max_wait:
             store, lock = _get_store(job_id)
 
-            with lock:
+            with lock: #Temporarily acquire the lock while reading the shared store.Concurrent access can create race conditions depending on how the store is manipulated.
                 new_events = store[cursor:]
 
             if new_events:

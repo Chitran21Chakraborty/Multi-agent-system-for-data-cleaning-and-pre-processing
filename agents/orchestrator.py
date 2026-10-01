@@ -7,7 +7,7 @@ from langchain_core.messages import HumanMessage
 _current_job_id = None
 
 def set_job_id(job_id: str):
-    global _current_job_id
+    global _current_job_id #storing job id in modular level so other part of the app can refer this later
     _current_job_id = job_id
 
 def emit(event_type: str, data: dict):
