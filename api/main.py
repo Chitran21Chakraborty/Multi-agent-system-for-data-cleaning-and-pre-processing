@@ -36,10 +36,11 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# connect UI to streaming routes.
 app.include_router(ui_router)
 app.include_router(stream_router)
 
-app.add_middleware(
+app.add_middleware( # communicate even if frontend and backend are hosted in different domains.
     CORSMiddleware,
     allow_origins=["*"],
     allow_methods=["*"],
@@ -79,7 +80,7 @@ def root():
     return RedirectResponse(url="/ui")
 
 
-@app.get("/api")
+@app.get("/api") #This simply tells the user what APIs are available.
 def api_info():
     return {
         "message": "AutoClean",
@@ -99,7 +100,7 @@ def api_info():
     }
 
 
-@app.get("/health")
+@app.get("/health") #This is used to check whether the backend is alive.
 def health_check():
     return {"status": "ok", "service": "autoclean"}
 
@@ -140,7 +141,7 @@ async def preprocess_url(request: URLRequest):
     job_id = str(uuid.uuid4())[:8]
     os.makedirs(f"outputs/{job_id}", exist_ok=True)
 
-    def run_in_background():
+    def run_in_background(): #Because preprocessing could take several seconds/minutes.
         try:
             result = run_pipeline(request.url, request.learning_objective, job_id)
             response_data = build_response(result, job_id)
@@ -370,7 +371,7 @@ INSTRUCTIONS:
     llm = get_llm()
     messages = [SystemMessage(content=system_prompt)]
 
-    for msg in request.history[-6:]:
+    for msg in request.history[-6:]: #LLM Keeps a history of last 6 chats.
         if msg["role"] == "user":
             messages.append(HumanMessage(content=msg["content"]))
         elif msg["role"] == "assistant":
